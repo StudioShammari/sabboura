@@ -4,7 +4,7 @@ import sharp from 'sharp';
 import { eq } from 'drizzle-orm';
 import { KID_IDS, libraryTopics, registerTopic, type KidId, type Lang, type TopicDef, type TopicKid } from '../../shared/data';
 import { defaultsFor, type PlanDefaults } from '../../shared/plan';
-import { PACK_MAX_PAGES, type PackFailReason, type PackInfo } from '../../shared/pack';
+import { type PackFailReason, type PackInfo, type PageRange } from '../../shared/pack';
 import { db, packs } from '../db';
 import { AIError, claudeJSON } from '../ai/clients';
 import { PACK_JSON_SCHEMA, PACK_SYSTEM, PackOut } from './prompt';
@@ -15,8 +15,9 @@ export class PackError extends Error {
   constructor(public reason: PackFailReason) { super(reason); }
 }
 
-export const packIdFor = (content: Buffer | string, language: Lang, pages: number) =>
-  'up-' + createHash('sha1').update(content).update(`|${language}|${pages}`).digest('hex').slice(0, 20);
+/** The hash covers the PDF page range (from-to). Photos and pasted text have no range. */
+export const packIdFor = (content: Buffer | string, language: Lang, range: PageRange | null) =>
+  'up-' + createHash('sha1').update(content).update(`|${language}|${range ? `${range.from}-${range.to}` : '-'}`).digest('hex').slice(0, 20);
 
 /** Type from the first bytes, never from the file name or the browser's claim. */
 export function sniff(buf: Buffer): { kind: 'pdf' | 'image'; mime: string } | null {
@@ -29,16 +30,19 @@ export function sniff(buf: Buffer): { kind: 'pdf' | 'image'; mime: string } | nu
 }
 
 /** Turn the upload into Claude content blocks. Held in memory only. */
-async function toBlocks(m: Material, pages: number): Promise<any[]> {
+async function toBlocks(m: Material, range: PageRange | null): Promise<any[]> {
   if (m.kind === 'text') return [{ type: 'text', text: `The teacher's material (pasted text):\n\n${m.text}` }];
   if (m.kind === 'pdf') {
     try {
       const src = await PDFDocument.load(m.buf, { ignoreEncryption: false, updateMetadata: false });
       const n = src.getPageCount();
       if (n < 1) throw new PackError('unreadable');
-      const keep = Math.min(Math.max(1, pages), PACK_MAX_PAGES, n);
+      const r = range ?? { from: 1, to: n };
+      const from = Math.min(Math.max(1, r.from), n);
+      const to = Math.min(Math.max(from, r.to), n);
+      if (r.from > n) throw new PackError('page_range');
       const out = await PDFDocument.create();
-      const copied = await out.copyPages(src, Array.from({ length: keep }, (_, i) => i));
+      const copied = await out.copyPages(src, Array.from({ length: to - from + 1 }, (_, i) => from - 1 + i));
       copied.forEach((p) => out.addPage(p));
       const bytes = await out.save();
       return [{ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: Buffer.from(bytes).toString('base64') } }];
@@ -114,10 +118,10 @@ export function buildInfo(out: PackOut, id: string, language: Lang, source: stri
 const jobs = new Map<string, Promise<void>>();
 export const isRunning = (id: string) => jobs.has(id);
 
-export function startJob(id: string, language: Lang, material: Material, pages: number, source: string | null) {
+export function startJob(id: string, language: Lang, material: Material, range: PageRange | null, source: string | null) {
   const job = (async () => {
     try {
-      const blocks = await toBlocks(material, pages);
+      const blocks = await toBlocks(material, range);
       const out = await callPack(blocks, language);
       const info = buildInfo(out, id, language, source);
       if (info.topic) registerTopic(info.topic);

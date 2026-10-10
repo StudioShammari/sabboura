@@ -5,7 +5,7 @@ import { KID_IDS, libraryTopics, isLibraryTopic, kidById, type Lang, type Title 
 import { PACK_MAX_PAGES, PACK_MAX_TEXT, type PackFailReason } from '@shared/pack';
 import { KidAvatar } from '@/components/KidAvatar';
 import { Stepper } from '@/components/Stepper';
-import { useT, tr, type Key } from '@/i18n';
+import { useT, tr, trf, type Key } from '@/i18n';
 import { PackFail, checkFile, makePack } from '@/lib/packs';
 import { loadManifest } from '@/lib/audio';
 import { setSettings, useSettings } from '@/lib/store';
@@ -31,9 +31,10 @@ export default function Home() {
   // ---- upload ----
   const [file, setFile] = useState<File | null>(null);
   const [text, setText] = useState('');
-  const [pages, setPages] = useState(PACK_MAX_PAGES);
+  const [from, setFrom] = useState('1');
+  const [to, setTo] = useState(String(PACK_MAX_PAGES));
   const [over, setOver] = useState(false);
-  const [up, setUp] = useState<{ phase: 'idle' } | { phase: 'working'; step: 1 | 2 | 3 } | { phase: 'error'; reason: PackFailReason }>({ phase: 'idle' });
+  const [up, setUp] = useState<{ phase: 'idle' } | { phase: 'working'; step: 1 | 2 | 3 } | { phase: 'error'; reason: PackFailReason; pages?: number }>({ phase: 'idle' });
   const abort = useRef<AbortController | null>(null);
   const pick = useRef<HTMLInputElement>(null);
   const isPdf = !!file && (file.type === 'application/pdf' || /\.pdf$/i.test(file.name));
@@ -45,23 +46,30 @@ export default function Home() {
     if (bad) { setUp({ phase: 'error', reason: bad }); return; }
     setFile(f); setText(''); setUp({ phase: 'idle' });
   };
+  // a range is 1-based and at most PACK_MAX_PAGES long; fixed when the field loses focus
+  const int = (v: string, d: number) => Math.max(1, Math.floor(Number(v)) || d);
+  const fixFrom = () => { const f = int(from, 1); const t = int(to, f); setFrom(String(f)); setTo(String(t < f || t > f + PACK_MAX_PAGES - 1 ? f + PACK_MAX_PAGES - 1 : t)); };
+  const fixTo = () => { const f = int(from, 1); const t = int(to, f); setTo(String(Math.max(t, 1))); setFrom(String(t < f ? t : t - f > PACK_MAX_PAGES - 1 ? t - PACK_MAX_PAGES + 1 : f)); };
   const make = async () => {
+    let f = int(from, 1); let t = int(to, f);
+    if (t < f) t = f;
+    if (t - f > PACK_MAX_PAGES - 1) t = f + PACK_MAX_PAGES - 1;
     abort.current?.abort();
     const ac = new AbortController(); abort.current = ac;
     setUp({ phase: 'working', step: 1 });
     try {
-      const pack = await makePack({ file: file ?? undefined, text: file ? undefined : text, language: s.lang, pages }, { signal: ac.signal, onStep: (step) => setUp((u) => (u.phase === 'working' ? { phase: 'working', step } : u)) });
+      const pack = await makePack({ file: file ?? undefined, text: file ? undefined : text, language: s.lang, from: f, to: t }, { signal: ac.signal, onStep: (step) => setUp((u) => (u.phase === 'working' ? { phase: 'working', step } : u)) });
       setSettings({ lang: pack.language, topicId: pack.topic?.id ?? pack.libraryTopicId ?? 'fractions' });
       nav(`/plan/${pack.id}`);
     } catch (e) {
       if ((e as Error)?.name === 'AbortError') return;
-      setUp({ phase: 'error', reason: e instanceof PackFail ? e.reason : 'unreadable' });
+      setUp({ phase: 'error', reason: e instanceof PackFail ? e.reason : 'unreadable', pages: e instanceof PackFail ? e.pages : undefined });
     }
   };
   const cancelUp = () => { abort.current?.abort(); setUp({ phase: 'idle' }); };
   useEffect(() => () => abort.current?.abort(), []);
   const errKey = (r: PackFailReason): [Key, Key] =>
-    r === 'too_big' ? ['errTooBig', 'errTooBigHint'] : r === 'wrong_type' ? ['errType', 'errTypeHint'] : r === 'not_lesson' ? ['errNotLesson', 'errNotLessonHint'] : r === 'timeout' ? ['errTimeout', 'errTimeoutHint'] : ['errUnreadable', 'errUnreadableHint'];
+    r === 'page_range' ? ['errPages', 'errPagesHint'] : r === 'too_big' ? ['errTooBig', 'errTooBigHint'] : r === 'wrong_type' ? ['errType', 'errTypeHint'] : r === 'not_lesson' ? ['errNotLesson', 'errNotLessonHint'] : r === 'timeout' ? ['errTimeout', 'errTimeoutHint'] : ['errUnreadable', 'errUnreadableHint'];
 
   useEffect(() => { QRCode.toDataURL(location.origin, { margin: 1, width: 160 }).then(setQr).catch(() => {}); void loadManifest(); }, []);
 
@@ -96,10 +104,11 @@ export default function Home() {
           </div>
         ) : up.phase === 'error' ? (
           <div className="paper-card upload-error" role="alert">
-            <h2>{tr(errKey(up.reason)[0], lang)}</h2>
+            <h2>{up.reason === 'page_range' ? trf('errPages', lang, { n: up.pages ?? 1 }) : tr(errKey(up.reason)[0], lang)}</h2>
             <p>{tr(errKey(up.reason)[1], lang)}</p>
             <div className="actions">
-              <button type="button" className="btn btn-primary" onClick={() => { setFile(null); setText(''); setUp({ phase: 'idle' }); setTimeout(() => pick.current?.click(), 0); }}>{tr('tryAnother', lang)}</button>
+              {up.reason === 'page_range' && <button type="button" className="btn btn-primary" onClick={() => setUp({ phase: 'idle' })}>{tr('changePages', lang)}</button>}
+              <button type="button" className={`btn${up.reason === 'page_range' ? '' : ' btn-primary'}`} onClick={() => { setFile(null); setText(''); setUp({ phase: 'idle' }); setTimeout(() => pick.current?.click(), 0); }}>{tr('tryAnother', lang)}</button>
               <button type="button" className="btn" onClick={() => { setFile(null); setText(''); setUp({ phase: 'idle' }); }}>{tr('useReady', lang)}</button>
             </div>
           </div>
@@ -125,12 +134,15 @@ export default function Home() {
               )}
               <div className="upload-foot">
                 {isPdf && (
-                  <label className="pages-field" title={tr('pagesHint', lang)}>
-                    <span className="lbl">{tr('pagesLbl', lang)}</span>
-                    <input type="number" min={1} max={PACK_MAX_PAGES} value={pages} onChange={(e) => setPages(Math.min(PACK_MAX_PAGES, Math.max(1, Math.floor(Number(e.target.value)) || 1)))} />
-                  </label>
+                  <div className="pages-field">
+                    <label><span className="lbl">{tr('pagesFrom', lang)}</span>
+                      <input type="number" inputMode="numeric" min={1} value={from} onChange={(e) => setFrom(e.target.value)} onBlur={fixFrom} /></label>
+                    <label><span className="lbl">{tr('pagesTo', lang)}</span>
+                      <input type="number" inputMode="numeric" min={1} value={to} onChange={(e) => setTo(e.target.value)} onBlur={fixTo} /></label>
+                    <small className="pages-hint">{tr('pagesHint', lang)}</small>
+                  </div>
                 )}
-                <button type="button" className="btn btn-primary" disabled={!canMake} onClick={() => void make()}>{tr('uploadGo', lang)}</button>
+                <button type="button" className={`btn ${canMake ? 'btn-primary' : 'btn-outline'}`} disabled={!canMake} onClick={() => void make()}>{tr('uploadGo', lang)}</button>
               </div>
               <p className="upload-note">{tr('uploadNote', lang)}</p>
             </section>
@@ -138,6 +150,7 @@ export default function Home() {
               <Pills<Lang> label={tr('language', lang)} value={s.lang} options={[{ v: 'ar', l: 'العربية' }, { v: 'en', l: 'English' }]} onChange={(v) => setSettings({ lang: v })} />
               <Pills<Title> label={tr('callsYou', lang)} value={s.title} options={titleOpts} onChange={(v) => setSettings({ title: v })} />
               <Pills stack label={tr('readyLessons', lang)} value={libId} options={libraryTopics.map((t) => ({ v: t.id, l: t.title[lang] }))} onChange={(v) => setSettings({ topicId: v })} />
+              <button className={`btn ${canMake ? 'btn-outline' : 'btn-primary'}`} onClick={() => nav(`/plan/lib-${libId}`)}>{tr('nextPlan', lang)}</button>
             </section>
           </div>
         )}
@@ -148,7 +161,6 @@ export default function Home() {
               <input type="checkbox" checked={s.calm} onChange={(e) => setSettings({ calm: e.target.checked })} /> <span>{tr('calm', lang)}</span>
             </label>
           </div>
-          <button className="btn btn-primary" style={{ fontSize: '1.4rem' }} disabled={up.phase === 'working'} onClick={() => nav(`/plan/lib-${libId}`)}>{tr('nextPlan', lang)}</button>
         </div>
       </div>
       <footer className="home-foot">

@@ -12,7 +12,9 @@ export interface PackInfo {
   topic: TopicDef | null;
   plan: PlanDefaults;
 }
-export type PackFailReason = 'too_big' | 'wrong_type' | 'unreadable' | 'not_lesson' | 'timeout';
+export type PackFailReason = 'too_big' | 'wrong_type' | 'unreadable' | 'not_lesson' | 'timeout' | 'page_range';
+/** 1-based, inclusive page range of a PDF. At most PACK_MAX_PAGES pages. */
+export interface PageRange { from: number; to: number }
 export interface PackStatus { status: 'working' | 'ready' | 'failed'; reason?: PackFailReason; pack?: PackInfo }
 export const PACK_MAX_BYTES = 10 * 1024 * 1024;
 export const PACK_MAX_TEXT = 12000;

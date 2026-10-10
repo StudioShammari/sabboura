@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { KID_IDS, kidById, topicById, type KidId, type Lang } from '../../shared/data';
 import type { Plan, PlanCheck, PlanKind, PlanRow } from '../../shared/plan';
 import { AIError, claudeJSON } from '../ai/clients';
-import { normalise, overlap } from '../lib/arabic';
+import { normalise, overlap, words } from '../lib/arabic';
 import type { TurnRec } from '../rules/score';
 
 /** The checklist compares the teacher's own plan with what was said. It never touches the score. */
@@ -52,9 +52,12 @@ const AI_KINDS: PlanKind[] = ['explain', 'example', 'other'];
 
 function namedKid(text: string): KidId | null {
   const n = normalise(text);
+  const ws = new Set(words(text));
   for (const k of KID_IDS) {
     const d = kidById(k);
-    if (n.includes(normalise(d.name.ar))) return k;
+    // whole words only; Arabic may carry the «ل» prefix («للينا»), but «العمر» is not Omar
+    const ar = normalise(d.name.ar);
+    if (ws.has(ar) || ws.has('ل' + ar)) return k;
     if (new RegExp(`\\b${d.name.en.toLowerCase()}\\b`).test(n)) return k;
   }
   return null;

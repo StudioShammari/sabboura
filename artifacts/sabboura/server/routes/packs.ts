@@ -1,8 +1,9 @@
+import { PDFDocument } from 'pdf-lib';
 import { Router, type NextFunction, type Request, type Response } from 'express';
 import multer from 'multer';
 import { eq } from 'drizzle-orm';
 import { db, packs } from '../db';
-import { PACK_MAX_BYTES, PACK_MAX_PAGES, PACK_MAX_TEXT, type PackFailReason, type PackInfo, type PackStatus } from '../../shared/pack';
+import { PACK_MAX_BYTES, PACK_MAX_PAGES, PACK_MAX_TEXT, type PackFailReason, type PackInfo, type PackStatus, type PageRange } from '../../shared/pack';
 import { isRunning, packIdFor, sniff, startJob, type Material } from '../packs/build';
 
 export const packsRouter = Router();
@@ -19,7 +20,9 @@ packsRouter.post('/packs', (req: Request, res: Response, next: NextFunction) => 
   });
 }, async (req: Request, res: Response) => {
   const language = req.body?.language === 'en' ? 'en' : 'ar';
-  const pages = Math.min(PACK_MAX_PAGES, Math.max(1, Math.floor(Number(req.body?.pages) || PACK_MAX_PAGES)));
+  const wantFrom = Math.max(1, Math.floor(Number(req.body?.from)) || 1);
+  const wantTo = Math.floor(Number(req.body?.to)) || wantFrom + PACK_MAX_PAGES - 1;
+  let range: PageRange | null = null;
   const rawName = String(req.body?.fileName ?? '').replace(/[\r\n\t]/g, ' ').trim().slice(0, 80);
   let material: Material; let key: Buffer | string; let source: string | null = null;
   if (req.file) {
@@ -27,6 +30,13 @@ packsRouter.post('/packs', (req: Request, res: Response, next: NextFunction) => 
     const t = sniff(req.file.buffer);
     if (!t) return fail(res, 415, 'wrong_type');
     material = { kind: t.kind, buf: req.file.buffer, mime: t.mime };
+    if (t.kind === 'pdf') {
+      let n: number;
+      try { n = (await PDFDocument.load(req.file.buffer, { updateMetadata: false })).getPageCount(); } catch { return fail(res, 400, 'unreadable'); }
+      if (n < 1) return fail(res, 400, 'unreadable');
+      if (wantFrom > n) return void res.status(400).json({ error: 'page_range', reason: 'page_range', pages: n });
+      range = { from: wantFrom, to: Math.min(n, Math.max(wantFrom, wantTo), wantFrom + PACK_MAX_PAGES - 1) };
+    }
     key = req.file.buffer;
     source = rawName || null;
   } else {
@@ -36,13 +46,13 @@ packsRouter.post('/packs', (req: Request, res: Response, next: NextFunction) => 
     material = { kind: 'text', text };
     key = text;
   }
-  const id = packIdFor(key, language, pages);
+  const id = packIdFor(key, language, range);
   const [row] = await db.select().from(packs).where(eq(packs.id, id)).limit(1);
   const fresh = req.body?.fresh === '1';
   if (row && !fresh && (row.status === 'ready' || (row.status === 'working' && isRunning(id)))) return void res.status(202).json({ packId: id });
   if (row) await db.update(packs).set({ status: 'working', reason: null, createdAt: new Date() }).where(eq(packs.id, id));
   else await db.insert(packs).values({ id, language, status: 'working' });
-  startJob(id, language, material, pages, source);
+  startJob(id, language, material, range, source);
   res.status(202).json({ packId: id });
 });
 

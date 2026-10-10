@@ -2,9 +2,9 @@ import { registerTopic, type Lang } from '@shared/data';
 import { PACK_MAX_BYTES, PACK_MAX_PAGES, PACK_MAX_TEXT, type PackFailReason, type PackInfo } from '@shared/pack';
 import { getPack } from '@/lib/api';
 
-export interface PackInput { file?: File; text?: string; language: Lang; pages: number }
+export interface PackInput { file?: File; text?: string; language: Lang; from: number; to: number }
 export class PackFail extends Error {
-  constructor(public reason: PackFailReason) { super(reason); }
+  constructor(public reason: PackFailReason, public pages?: number) { super(reason); }
 }
 
 // The chosen file stays in this tab's memory only, so "New draft" can ask again. It is never saved anywhere.
@@ -49,7 +49,9 @@ export async function makePack(inp: PackInput, o: { signal?: AbortSignal; onStep
   last = inp;
   const fd = new FormData();
   fd.append('language', inp.language);
-  fd.append('pages', String(Math.min(PACK_MAX_PAGES, Math.max(1, inp.pages))));
+  const from = Math.max(1, Math.floor(inp.from) || 1);
+  fd.append('from', String(from));
+  fd.append('to', String(Math.min(from + PACK_MAX_PAGES - 1, Math.max(from, Math.floor(inp.to) || from))));
   if (o.fresh) fd.append('fresh', '1');
   if (inp.file) {
     const bad = checkFile(inp.file);
@@ -73,6 +75,7 @@ export async function makePack(inp: PackInput, o: { signal?: AbortSignal; onStep
     catch (e) { if ((e as Error)?.name === 'AbortError') throw e; throw new PackFail('unreadable'); }
     if (res.status !== 202) {
       const j = await res.json().catch(() => ({}));
+      if (j.reason === 'page_range') throw new PackFail('page_range', Number(j.pages) || 1);
       throw new PackFail(res.status === 413 ? 'too_big' : res.status === 415 ? 'wrong_type' : (j.reason as PackFailReason) ?? 'unreadable');
     }
     const { packId } = (await res.json()) as { packId: string };

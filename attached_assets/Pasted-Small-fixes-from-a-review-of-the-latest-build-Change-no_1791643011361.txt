@@ -1,0 +1,34 @@
+Small fixes from a review of the latest build. Change nothing else, especially:
+- the turn pipeline;
+- the judge;
+- scoring;
+- the test sheet;
+- the stage-mode flow.
+
+After the fixes:
+1. run `pnpm test:judge -- --rows 1,2,3,4,7` and `pnpm test:plan`;
+2. take screenshots of the screens you touched (1280×720, Arabic and English, plus Home at 390×844);
+3. show me all of it.
+
+1. **PDF pages.** Today the upload only takes "the first N pages", so a whole textbook PDF sends the cover and the contents pages.
+   - Replace the pages field with "من صفحة __ لصفحة __ / From page __ to page __", plus the hint "اختار صفحات درس بكرا / Pick the pages of tomorrow's lesson".
+   - The default range is 1 to 6, and a range can be at most 6 pages.
+   - The server keeps exactly that range with pdf-lib, clamped to the PDF's page count.
+   - If the start page is past the end, show a friendly card: "هاد الملف فيه {n} صفحات بس. / This PDF only has {n} pages."
+   - The pack id hash uses the range (from–to), not a page count.
+
+2. **"My plan" popover in the classroom.**
+   - It doesn't close with Escape, because the classroom key handler returns early on Escape to protect the stage hotkeys.
+   - Outside stage mode, close it on Escape when it's open, on any click outside it, and when recording or typing starts.
+   - It must never cover the kid cards while the teacher is talking.
+
+3. **Review page.** The grey "ليس بعد / Not yet" chip in the teaching-moves column wraps onto two lines. Add `white-space: nowrap` and give the column enough room that it stays on one line in Arabic and English at 1280 wide.
+
+4. **Home has two blue buttons** ("جهّز الخطة" in the upload card and "التالي: خطّط للحصة"), so it isn't clear which one to press. Put each button inside its own card:
+   - "Next: plan the lesson" goes inside the ready-lessons card.
+   - In the upload card, "جهّز الخطة / Prepare my plan" stays an outline button until there's a file or text, then becomes the solid one.
+   - There is never more than one solid blue button on the page.
+
+5. **`namedKid()` in checkPlan.** Match whole names only, allowing the Arabic «ل» prefix (as in «للينا»), so a word like «العمر» doesn't count as Omar.
+
+6. **docs/SPEC.md.** The v2 section says the AI checks "the explain step only", but the code checks explain, example and other. Fix the text.

@@ -42,3 +42,31 @@ mtime_ms = 1791640278724
 storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:2e97b30e-7cb5-420e-992f-61305f749ba7/33044c68-82af-4421-a40e-c7128008c93f/553b7cd0-e24a-4f7c-8849-9768cfbaae63"
 storage_version_token = "1791640288190257"
 content_type = "image/jpeg"
+
+[[outputs]]
+id = "YWmiw4JUzQom-fVrxKXLo"
+uri = "file://artifacts/sabboura/generated-artifacts/fixes-1280.jpg"
+type = "image"
+title = "Fixes at 1280x720"
+description = "Home (ar), PDF selected (en), page-range card (ar), My plan popover (en), review moves (ar, en)"
+logical_id = "4adbe2c7-bd36-41b8-a990-d808771068ed"
+content_hash = "sha256:0d5aac69af6c6c03507ebca431aa47541e0fb5997768ac4945ffcb3375934981"
+size = 335254
+mtime_ms = 1791643483601
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:2e97b30e-7cb5-420e-992f-61305f749ba7/4adbe2c7-bd36-41b8-a990-d808771068ed/9f93a8f4-421b-4184-bab9-f1188549a965"
+storage_version_token = "1791643494762073"
+content_type = "image/jpeg"
+
+[[outputs]]
+id = "rLzBzXFbf-WbGAO9zmokn"
+uri = "file://artifacts/sabboura/generated-artifacts/fixes-390.jpg"
+type = "image"
+title = "Home at 390x844"
+description = "Home idle (ar), PDF selected (ar), idle (en)"
+logical_id = "2339eec0-bbd0-4788-a9b3-8b91a8f3817d"
+content_hash = "sha256:599907d9f71db5f85016cf904905e65c533e3212f964c4ee3419bd2cf6d83244"
+size = 177899
+mtime_ms = 1791643483864
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:2e97b30e-7cb5-420e-992f-61305f749ba7/2339eec0-bbd0-4788-a9b3-8b91a8f3817d/b9906596-f6e4-4646-8eaf-38d1a316ebbb"
+storage_version_token = "1791643496054341"
+content_type = "image/jpeg"

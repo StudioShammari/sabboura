@@ -394,6 +394,16 @@ export default function Classroom() {
     return () => { window.removeEventListener('keydown', down); window.removeEventListener('keyup', up); };
   }, [needTap, demo, qs, nav, startRec, stopRec]);
 
+  // "My plan": closes on Escape, on a click outside it, and as soon as the teacher starts recording or typing
+  useEffect(() => {
+    if (!planOpen) return;
+    if (phase === 'recording' || typing) { setPlanOpen(false); return; }
+    const key = (e: KeyboardEvent) => { if (e.code === 'Escape') setPlanOpen(false); };
+    const away = (e: PointerEvent) => { if (!(e.target as HTMLElement)?.closest?.('.plan-pill-wrap')) setPlanOpen(false); };
+    window.addEventListener('keydown', key); document.addEventListener('pointerdown', away);
+    return () => { window.removeEventListener('keydown', key); document.removeEventListener('pointerdown', away); };
+  }, [planOpen, phase, typing]);
+
   // Enter confirms, Escape closes the end-lesson dialog
   useEffect(() => {
     if (!confirmEnd) return;
