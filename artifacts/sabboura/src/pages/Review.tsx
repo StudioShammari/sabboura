@@ -136,10 +136,18 @@ export default function Review() {
 
   const autoReveal = useRef(new URLSearchParams(location.search).get('reveal') === '1');
   useEffect(() => {
-    if (!score || !autoReveal.current || !import.meta.env.DEV) return;
+    if (!score || !autoReveal.current) return;
     autoReveal.current = false;
     setRevealed(true);
-    // dev only: ?reveal=1 opens the review with every card already flipped (no animation), for screenshots
+    if (matchMedia('(max-width: 767px)').matches) { setFlipped(new Set(KID_IDS)); return; }
+    void (async () => { await sleep(900); for (const k of REVEAL_ORDER) { setFlipped((x) => new Set(x).add(k)); sfx.flip(); await sleep(150); } })();
+  }, [score]);
+  // dev only, for screenshots: ?flipped=1 opens the review with every card flipped and no animation
+  const instantFlip = useRef(import.meta.env.DEV && new URLSearchParams(location.search).get('flipped') === '1');
+  useEffect(() => {
+    if (!score || !instantFlip.current) return;
+    instantFlip.current = false;
+    setRevealed(true);
     setFlipped(new Set(KID_IDS)); document.documentElement.dataset.instantFlip = '1';
   }, [score]);
   if (missing) return <main className="review"><div className="panel"><p>{t('notFound')}</p><button className="btn btn-primary" onClick={() => nav('/')}>{t('home')}</button></div></main>;

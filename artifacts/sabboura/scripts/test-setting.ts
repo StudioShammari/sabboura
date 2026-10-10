@@ -81,7 +81,9 @@ check('back row rises, then falls', timeline[1] >= 2 && timeline[2] < timeline[1
   await turn(id, demoScript[0].ar, 8);
   const r = await fetch(`${base}/api/lessons/${id}/call-on`, { method: 'POST', headers: { 'content-type': 'application/json', accept: 'text/event-stream' }, body: JSON.stringify({ kid: 'khaled' }) });
   const txt = await r.text();
-  check('exam focus: khaled asks «هاد بيجي بالامتحان؟»', txt.includes('هاد بيجي بالامتحان'));
+  // the AI words it freely, so the check is only that Khaled's spoken line mentions the exam (not the audio data)
+  const lines = [...txt.matchAll(/event: line\ndata: (.+)/g)].map((m) => { try { return JSON.parse(m[1]) as { kid: string; text: string; text_en?: string }; } catch { return null; } });
+  check('exam focus: khaled\'s line mentions the exam', lines.some((l) => l?.kid === 'khaled' && /امتحان|exam/i.test(`${l.text} ${l.text_en ?? ''}`)), lines.map((l) => l?.text).join(' | '));
 }
 
 const failed = results.filter((r) => !r[1]);
