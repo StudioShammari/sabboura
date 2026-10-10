@@ -1,0 +1,366 @@
+{
+  "kids": [
+    {
+      "id": "omar",
+      "name": {
+        "en": "Omar",
+        "ar": "عمر"
+      },
+      "gender": "m",
+      "vocal": true,
+      "labels": "understanding",
+      "personality": "Confident, often wrong, hand always up.",
+      "failsafe": {
+        "en": "Can you say that again?",
+        "ar": "مرة كمان؟"
+      }
+    },
+    {
+      "id": "lina",
+      "name": {
+        "en": "Lina",
+        "ar": "لينا"
+      },
+      "gender": "f",
+      "vocal": false,
+      "labels": "understanding",
+      "personality": "Shy. Never volunteers. Speaks only when asked by name, quietly and briefly.",
+      "failsafe": {
+        "en": "Um...",
+        "ar": "امم..."
+      }
+    },
+    {
+      "id": "sara",
+      "name": {
+        "en": "Sara",
+        "ar": "سارة"
+      },
+      "gender": "f",
+      "vocal": true,
+      "labels": "understanding",
+      "personality": "Literal. Always asks 'but why?'",
+      "failsafe": {
+        "en": "But why?",
+        "ar": "بس ليش؟"
+      }
+    },
+    {
+      "id": "khaled",
+      "name": {
+        "en": "Khaled",
+        "ar": "خالد"
+      },
+      "gender": "m",
+      "vocal": true,
+      "labels": "understanding",
+      "personality": "Practical. Wants real-life examples.",
+      "failsafe": {
+        "en": "When would I use this?",
+        "ar": "وين رح أستخدم هاد؟"
+      }
+    },
+    {
+      "id": "yazan",
+      "name": {
+        "en": "Yazan",
+        "ar": "يزن"
+      },
+      "gender": "m",
+      "vocal": true,
+      "labels": "engagement",
+      "personality": "Fast learner. Gets bored without a challenge.",
+      "failsafe": {
+        "en": "Can we do something harder?",
+        "ar": "في إشي أصعب؟"
+      }
+    }
+  ],
+  "labels": {
+    "understanding": {
+      "en": [
+        "Lost",
+        "Partly",
+        "Got it"
+      ],
+      "ar_m": [
+        "تايه",
+        "نص نص",
+        "فاهم"
+      ],
+      "ar_f": [
+        "تايهة",
+        "نص نص",
+        "فاهمة"
+      ]
+    },
+    "engagement": {
+      "en": [
+        "Bored",
+        "Waiting",
+        "Challenged"
+      ],
+      "ar_m": [
+        "زهقان",
+        "مستني",
+        "متحمّس"
+      ],
+      "ar_f": [
+        "زهقانة",
+        "مستنية",
+        "متحمّسة"
+      ]
+    }
+  },
+  "chorus": {
+    "ar_miss": "آه مس!",
+    "ar_sir": "آه أستاذ!",
+    "en_miss": "Yes, Miss!",
+    "en_sir": "Yes, Sir!"
+  },
+  "topics": [
+    {
+      "id": "fractions",
+      "title": {
+        "en": "Comparing fractions",
+        "ar": "مقارنة الكسور"
+      },
+      "grade": "4-5",
+      "vocab": "كسر، كسور، بسط، مقام، نص، ثلث، ربع، منسف، fraction, numerator, denominator, half, third, quarter",
+      "kids": {
+        "omar": {
+          "start_level": 0,
+          "misconception": "Thinks a bigger bottom number means a bigger fraction: 3 is bigger than 2, so 1/3 is bigger than 1/2.",
+          "helped_if": "Explains that cutting one whole into MORE equal parts makes EACH part SMALLER (e.g. one mansaf shared by 3 people instead of 2).",
+          "hurt_if": "Says or implies that the bigger number makes the bigger fraction.",
+          "reveal": {
+            "en": "Thought a bigger bottom number means a bigger fraction. Needed to see that more equal parts means each part is smaller.",
+            "ar": "كان مفكّر إنه كل ما كبر الرقم تحت بيكبر الكسر. كان بدّه يشوف إنه كل ما زادت القطع، صغرت كل قطعة."
+          },
+          "next_check": {
+            "en": "Which is bigger, 1/5 or 1/4? How do you know?",
+            "ar": "أيهما أكبر: 1/5 ولا 1/4؟ كيف عرفت؟"
+          }
+        },
+        "lina": {
+          "start_level": 0,
+          "misconception": "Sees a fraction as two separate whole numbers (1 and 3), not as one amount.",
+          "helped_if": "Shows a fraction as ONE amount: a part of one whole (food, a drawing, a shape) or one point on a number line.",
+          "hurt_if": "Treats the top and bottom numbers as two separate numbers to compare.",
+          "reveal": {
+            "en": "Saw a fraction as two separate numbers. A drawing of one whole cut into parts, or a number line, would have helped.",
+            "ar": "كانت شايفة الكسر رقمين منفصلين. رسمة لشي كامل مقسوم لقطع، أو خط الأعداد، كان رح يساعدها."
+          },
+          "next_check": {
+            "en": "Show me where 1/3 goes on a line from 0 to 1.",
+            "ar": "وين بتحطي 1/3 على خط من 0 لـ 1؟"
+          }
+        },
+        "sara": {
+          "start_level": 0,
+          "misconception": "Memorised 'bigger bottom number = smaller fraction' with no idea why.",
+          "helped_if": "Gives the REASON (more equal parts means each part is smaller), not only the rule.",
+          "hurt_if": "Says 'just memorise the rule' or only repeats the rule.",
+          "reveal": {
+            "en": "Had memorised the rule with no reason. Needed to hear why it works.",
+            "ar": "كانت حافظة القاعدة بدون ما تعرف ليش. كانت بدها تسمع السبب."
+          },
+          "next_check": {
+            "en": "Why is 1/8 smaller than 1/4? Tell me the reason, not the rule.",
+            "ar": "ليش 1/8 أصغر من 1/4؟ احكيلي السبب، مش القاعدة."
+          }
+        },
+        "khaled": {
+          "start_level": 0,
+          "misconception": "Can't see why fractions matter in real life.",
+          "helped_if": "Uses a concrete real-life example (mansaf, pizza, ka'ak, a chocolate bar, money).",
+          "hurt_if": "Says it only matters for the exam.",
+          "reveal": {
+            "en": "Couldn't see where he'd use it. A real-life example (mansaf, pizza, ka'ak) would have reached him.",
+            "ar": "ما كان شايف وين رح يستخدمها. مثال من الحياة (منسف، بيتزا، كعك) كان رح يوصله."
+          },
+          "next_check": {
+            "en": "You want the biggest slice of pizza: 1/6 or 1/3?",
+            "ar": "بدك أكبر قطعة بيتزا: 1/6 ولا 1/3؟"
+          }
+        },
+        "yazan": {
+          "start_level": 1,
+          "misconception": "Already understands. Gets bored when the basics are repeated.",
+          "helped_if": "Gives him a harder challenge (e.g. which is bigger, 3/4 or 4/5?) or asks him to explain to the class.",
+          "hurt_if": "Repeats the same basic point again with nothing new.",
+          "reveal": {
+            "en": "Already understood. A harder challenge (3/4 or 4/5?) would have kept him with you.",
+            "ar": "كان فاهم من الأول. سؤال أصعب (3/4 ولا 4/5؟) كان رح يخلّيه معك."
+          },
+          "next_check": {
+            "en": "Which is bigger, 3/4 or 4/5? Explain how you know.",
+            "ar": "أيهما أكبر: 3/4 ولا 4/5؟ فسّر كيف عرفت."
+          }
+        }
+      }
+    },
+    {
+      "id": "negatives",
+      "title": {
+        "en": "Negative numbers",
+        "ar": "الأعداد السالبة"
+      },
+      "grade": "6-7",
+      "vocab": "سالب، موجب، صفر، خط الأعداد، حرارة، دين، negative, positive, zero, number line, temperature, debt",
+      "kids": {
+        "omar": {
+          "start_level": 0,
+          "misconception": "Thinks -5 is bigger than -2 because 5 is bigger than 2.",
+          "helped_if": "Uses a number line, temperature or floors to show that numbers further below zero are smaller.",
+          "hurt_if": "Compares negative numbers by their digits only.",
+          "reveal": {
+            "en": "Compared -5 and -2 by the digits. A number line or temperatures would have helped.",
+            "ar": "كان بقارن −5 و −2 بالأرقام بس. خط الأعداد أو درجات الحرارة كانت رح تساعده."
+          },
+          "next_check": {
+            "en": "Which is colder, -5° or -2°?",
+            "ar": "أيهما أبرد: −5 ولا −2 درجة؟"
+          }
+        },
+        "lina": {
+          "start_level": 0,
+          "misconception": "Thinks negative numbers aren't real numbers.",
+          "helped_if": "Gives negative numbers a real meaning (debt, temperature below zero, floors below ground).",
+          "hurt_if": "Presents negative numbers as rules with no meaning.",
+          "reveal": {
+            "en": "Didn't believe negative numbers are real. Debt or a temperature below zero would have made them real.",
+            "ar": "ما كانت مصدقة إنه الأعداد السالبة حقيقية. الدَّين أو الحرارة تحت الصفر كانت رح تقنعها."
+          },
+          "next_check": {
+            "en": "Tell me one place in real life where you see a negative number.",
+            "ar": "احكيلي مكان بالحياة بتشوفي فيه عدد سالب."
+          }
+        },
+        "sara": {
+          "start_level": 0,
+          "misconception": "Thinks 3 - (-2) = 1, because 'minus is always minus'.",
+          "helped_if": "Explains WHY subtracting a negative makes the result bigger (e.g. removing a debt), not only 'two minuses make a plus'.",
+          "hurt_if": "Says 'two minuses make a plus, just memorise it'.",
+          "reveal": {
+            "en": "Thought taking away a negative still makes it smaller. Removing a debt shows why it goes up.",
+            "ar": "كانت مفكرة إنه الطرح دايماً بنقّص. شطب دَين بوضّح ليش النتيجة بتزيد."
+          },
+          "next_check": {
+            "en": "You owe 2 dinars and someone cancels the debt. Are you richer or poorer?",
+            "ar": "عليكي دينارين، وحدا شطب الدَّين. صرتي أغنى ولا أفقر؟"
+          }
+        },
+        "khaled": {
+          "start_level": 0,
+          "misconception": "Can't see where negative numbers appear in real life.",
+          "helped_if": "Uses temperature, money and debt, or lift floors.",
+          "hurt_if": "Says it only matters for the exam.",
+          "reveal": {
+            "en": "Needed a real example: temperature, money or lift floors.",
+            "ar": "كان بدّه مثال من الحياة: الحرارة، المصاري، أو طوابق المصعد."
+          },
+          "next_check": {
+            "en": "The lift is at floor -1 and goes up 3 floors. Where is it now?",
+            "ar": "المصعد على طابق −1 وطلع 3 طوابق. وين صار؟"
+          }
+        },
+        "yazan": {
+          "start_level": 1,
+          "misconception": "Already understands. Gets bored when the basics are repeated.",
+          "helped_if": "Gives a harder challenge (e.g. -3 - (-7)) or asks him to explain to the class.",
+          "hurt_if": "Repeats the basics with nothing new.",
+          "reveal": {
+            "en": "Already understood. A harder problem like -3 - (-7) would have kept him with you.",
+            "ar": "كان فاهم من الأول. مسألة أصعب مثل −3 − (−7) كانت رح تخلّيه معك."
+          },
+          "next_check": {
+            "en": "What is -3 - (-7)? Show it on a number line.",
+            "ar": "قديش −3 − (−7)؟ وضّحها على خط الأعداد."
+          }
+        }
+      }
+    },
+    {
+      "id": "photosynthesis",
+      "title": {
+        "en": "Photosynthesis",
+        "ar": "البناء الضوئي"
+      },
+      "grade": "7-8",
+      "vocab": "بناء ضوئي، تنفس، ثاني أكسيد الكربون، أكسجين، جلوكوز، ضوء، photosynthesis, respiration, carbon dioxide, oxygen, glucose, light",
+      "kids": {
+        "omar": {
+          "start_level": 0,
+          "misconception": "Thinks plants get their food from the soil.",
+          "helped_if": "Explains that plants MAKE their own food (glucose) from carbon dioxide and water, using light.",
+          "hurt_if": "Says plants eat or get their food from the soil.",
+          "reveal": {
+            "en": "Thought plants eat from the soil. Needed to hear that they make their own food from air, water and light.",
+            "ar": "كان مفكر إنه النبتة بتوكل من التراب. كان لازم يسمع إنها بتصنع أكلها من الهوا والمي والضو."
+          },
+          "next_check": {
+            "en": "A tree weighs 500 kg. Where did most of that mass come from?",
+            "ar": "شجرة وزنها 500 كيلو. من وين إجا معظم وزنها؟"
+          }
+        },
+        "lina": {
+          "start_level": 0,
+          "misconception": "Thinks plants don't breathe (respire).",
+          "helped_if": "Says plants respire all the time, day and night, like animals.",
+          "hurt_if": "Says plants only breathe at night, or don't breathe.",
+          "reveal": {
+            "en": "Thought plants don't breathe. Needed to hear that they respire day and night.",
+            "ar": "كانت مفكرة إنه النباتات ما بتتنفس. كان لازم تسمع إنها بتتنفس ليل ونهار."
+          },
+          "next_check": {
+            "en": "Does a plant breathe at night? And in the day?",
+            "ar": "النبتة بتتنفس بالليل؟ وبالنهار؟"
+          }
+        },
+        "sara": {
+          "start_level": 0,
+          "misconception": "Mixes up photosynthesis and breathing: 'plants breathe in CO2 instead of oxygen'.",
+          "helped_if": "Clearly separates photosynthesis (takes in CO2, gives out O2, needs light) from respiration (takes in O2, all the time).",
+          "hurt_if": "Says plants 'breathe CO2' or mixes the two processes up.",
+          "reveal": {
+            "en": "Mixed up photosynthesis and breathing. Needed the two processes side by side.",
+            "ar": "كانت خالطة بين البناء الضوئي والتنفس. كانت بدها تشوفهم جنب بعض."
+          },
+          "next_check": {
+            "en": "What does a leaf take in for photosynthesis, and what for respiration?",
+            "ar": "شو بتاخد الورقة بالبناء الضوئي؟ وشو بتاخد بالتنفس؟"
+          }
+        },
+        "khaled": {
+          "start_level": 0,
+          "misconception": "Can't see why photosynthesis matters.",
+          "helped_if": "Uses a concrete example (e.g. most of a tree's mass comes from the air; all the food we eat starts with photosynthesis).",
+          "hurt_if": "Sticks to textbook definitions only.",
+          "reveal": {
+            "en": "Needed something real: most of a tree's mass comes from the air.",
+            "ar": "كان بدّه إشي حقيقي: معظم وزن الشجرة جاي من الهوا."
+          },
+          "next_check": {
+            "en": "Name one food you ate today that started with photosynthesis.",
+            "ar": "احكيلي أكلة أكلتها اليوم بلّشت من البناء الضوئي."
+          }
+        },
+        "yazan": {
+          "start_level": 1,
+          "misconception": "Already understands. Gets bored when the basics are repeated.",
+          "helped_if": "Gives a harder question (e.g. why does a plant in a dark room die even with water and soil?) or asks him to explain to the class.",
+          "hurt_if": "Repeats the basics with nothing new.",
+          "reveal": {
+            "en": "Already understood. A harder question (why does a plant die in the dark?) would have kept him with you.",
+            "ar": "كان فاهم من الأول. سؤال أصعب (ليش النبتة بتموت بالعتمة؟) كان رح يخلّيه معك."
+          },
+          "next_check": {
+            "en": "Why does a plant in a dark room die even with water and soil?",
+            "ar": "ليش النبتة بتموت بغرفة معتمة حتى لو في مي وتراب؟"
+          }
+        }
+      }
+    }
+  ]
+}

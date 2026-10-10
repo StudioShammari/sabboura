@@ -1,0 +1,90 @@
+{
+  "_note": "{t} = مس or أستاذ (Arabic), Miss or Sir (English). 'say' = the same line written the way it is spoken, used only for the voice.",
+  "starters": {
+    "fractions": {
+      "omar": {
+        "ar": "{t}، بس 3 أكبر من 2! ليش 1/3 أصغر؟",
+        "say_ar": "{t}، بس تلاتة أكبر من اتنين! ليش التلت أصغر؟",
+        "en": "{t}, but 3 is bigger than 2! Why is 1/3 smaller?",
+        "say_en": "{t}, but three is bigger than two! Why is a third smaller?"
+      },
+      "sara": {
+        "ar": "ليش؟ مش منطقي!",
+        "en": "But why? That makes no sense!"
+      },
+      "khaled": {
+        "ar": "{t}، وين رح أستخدم هاد بحياتي؟",
+        "en": "{t}, when will I ever use this?"
+      }
+    },
+    "negatives": {
+      "omar": {
+        "ar": "{t}، بس 5 أكبر من 2! يعني −5 أكبر، صح؟",
+        "say_ar": "{t}، بس خمسة أكبر من اتنين! يعني سالب خمسة أكبر، صح؟",
+        "en": "{t}, but 5 is bigger than 2! So -5 is bigger, right?",
+        "say_en": "{t}, but five is bigger than two! So minus five is bigger, right?"
+      },
+      "sara": {
+        "ar": "بس ليش؟ الناقص دايماً بنقّص!",
+        "en": "But why? Minus always makes it smaller!"
+      },
+      "khaled": {
+        "ar": "{t}، وين بشوف أعداد سالبة أصلاً؟",
+        "en": "{t}, where would I even see negative numbers?"
+      }
+    },
+    "photosynthesis": {
+      "omar": {
+        "ar": "{t}، النبتة بتوكل من التراب، صح؟",
+        "en": "{t}, plants eat from the soil, right?"
+      },
+      "sara": {
+        "ar": "بس ليش بتتنفس ثاني أكسيد الكربون؟",
+        "en": "But why do plants breathe in carbon dioxide?"
+      },
+      "khaled": {
+        "ar": "{t}، وشو دخلي أنا بالنباتات؟",
+        "en": "{t}, why does this even matter to me?"
+      }
+    }
+  },
+  "reasons": {
+    "aha": {
+      "ar": "آآه... هلأ فهمت!",
+      "en": "Ohh... I get it now!"
+    },
+    "aha_lina": {
+      "ar": "آه... فهمت!",
+      "en": "Oh... I get it!"
+    },
+    "bored": {
+      "ar": "{t}، هاد سهل... في إشي أصعب؟",
+      "en": "{t}, this is easy... can we do something harder?"
+    },
+    "timid_yes": {
+      "ar": "امم... آه.",
+      "en": "Um... yes?"
+    }
+  },
+  "answer_lost": {
+    "fractions": {
+      "lina": {
+        "ar": "امم... التلت؟ لأنه 3 أكبر من 2؟",
+        "say_ar": "امم... التلت؟ لأنه تلاتة أكبر من اتنين؟",
+        "en": "Um... a third? Because 3 is bigger than 2?"
+      }
+    },
+    "negatives": {
+      "lina": {
+        "ar": "امم... بس الأعداد السالبة مش حقيقية، صح؟",
+        "en": "Um... but negative numbers aren't real, right?"
+      }
+    },
+    "photosynthesis": {
+      "lina": {
+        "ar": "امم... النباتات ما بتتنفس، صح؟",
+        "en": "Um... plants don't breathe, right?"
+      }
+    }
+  }
+}

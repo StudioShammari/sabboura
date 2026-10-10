@@ -1,0 +1,48 @@
+{
+  "_note": "Used only when the scorer AI fails twice. Pick the entry for focus_move. try_saying 'next_check' means: use that kid's next_check from topics.json.",
+  "reached": {
+    "tip": {
+      "en": "Pick one kid who is still lost and show the idea with one drawing or a real-life example.",
+      "ar": "المرة القادمة: رسمة واحدة أو مثال من الحياة لطالب ما زال تائهاً."
+    },
+    "try_saying": {
+      "en": "Imagine one pizza shared by 2 people, then by 3. Who gets more?",
+      "ar": "تخيّلوا بيتزا وحدة بنقسمها على 2، وبعدين على 3. مين بياخد أكثر؟"
+    }
+  },
+  "checks": {
+    "tip": {
+      "en": "Swap \"Everyone understand?\" for a question that needs a real answer.",
+      "ar": "المرة القادمة: بدل «فاهمين؟» سؤال يحتاج جواباً حقيقياً."
+    },
+    "try_saying": {
+      "en": "Which is bigger, a half or a third? Why?",
+      "ar": "أيهما أكبر: نص ولا ثلث؟ ليش؟"
+    }
+  },
+  "lina": {
+    "tip": {
+      "en": "Ask Lina by name, early, with a short question she can answer.",
+      "ar": "المرة القادمة: سؤال للينا باسمها من بداية الدرس، تقدر تجاوبه بكلمتين."
+    },
+    "try_saying": "next_check:lina"
+  },
+  "yazan": {
+    "tip": {
+      "en": "Yazan already understood. Give him a harder one so he stays with you.",
+      "ar": "يزن كان فاهم من الأول. سؤال أصعب بيخلّيه معك."
+    },
+    "try_saying": "next_check:yazan"
+  },
+  "clarity": {
+    "tip": {
+      "en": "Give the reason, not only the rule, and show it with a picture or example.",
+      "ar": "المرة القادمة: السبب وليس القاعدة فقط، مع رسمة أو مثال."
+    },
+    "try_saying": {
+      "en": "More equal parts means each part is smaller. That is why 1/3 is smaller than 1/2.",
+      "ar": "كل ما زادت القطع المتساوية، صغرت كل قطعة. عشان هيك 1/3 أصغر من 1/2."
+    }
+  },
+  "fallback_clarity_rule": "3 if any kid was ever helped 'fully', 2 if only 'partly', else 1"
+}

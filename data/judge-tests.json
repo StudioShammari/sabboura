@@ -1,0 +1,259 @@
+[
+  {
+    "id": 1,
+    "lang": "ar",
+    "text": "القاعدة: كل ما كبر المقام، صغر الكسر. يعني 1/3 أصغر من 1/2.",
+    "expect": {
+      "helped": {
+        "omar": [
+          "no"
+        ],
+        "lina": [
+          "no"
+        ],
+        "sara": [
+          "no"
+        ],
+        "khaled": [
+          "no"
+        ]
+      },
+      "check": [
+        "none"
+      ],
+      "speakers": [
+        "omar:objection",
+        "sara:objection"
+      ]
+    }
+  },
+  {
+    "id": 2,
+    "lang": "ar",
+    "text": "احفظوا القاعدة وخلص. فاهمين؟",
+    "expect": {
+      "hurt": {
+        "sara": true
+      },
+      "check": [
+        "yes_no"
+      ],
+      "chorus": true,
+      "unchanged": [
+        "omar",
+        "lina",
+        "sara",
+        "khaled"
+      ]
+    }
+  },
+  {
+    "id": 3,
+    "lang": "ar",
+    "text": "لينا، أيهما أكبر: نص ولا ثلث؟",
+    "expect": {
+      "check": [
+        "question"
+      ],
+      "asked_kid": "lina",
+      "speakers": [
+        "lina:answer"
+      ]
+    }
+  },
+  {
+    "id": 4,
+    "lang": "ar",
+    "text": "تخيلي منسف واحد. إذا قسمناه على 2، كل واحد بوخذ نصه. إذا على 3، كل واحد بوخذ ثلث، يعني حصة أصغر. عشان هيك النص أكبر.",
+    "expect": {
+      "helped": {
+        "omar": [
+          "fully"
+        ],
+        "lina": [
+          "fully"
+        ],
+        "sara": [
+          "fully"
+        ],
+        "khaled": [
+          "fully"
+        ]
+      },
+      "speakers": [
+        "lina:aha",
+        "omar:aha"
+      ]
+    }
+  },
+  {
+    "id": 5,
+    "lang": "en",
+    "text": "Think of a pizza cut into 3 slices instead of 2. More slices means each slice is smaller.",
+    "expect": {
+      "helped": {
+        "omar": [
+          "fully"
+        ],
+        "sara": [
+          "fully"
+        ],
+        "khaled": [
+          "fully"
+        ],
+        "lina": [
+          "partly",
+          "fully"
+        ]
+      }
+    }
+  },
+  {
+    "id": 6,
+    "lang": "en",
+    "text": "Yazan, which is bigger: 3/4 or 4/5? Explain to the class.",
+    "expect": {
+      "helped": {
+        "yazan": [
+          "fully"
+        ]
+      },
+      "check": [
+        "question"
+      ],
+      "asked_kid": "yazan",
+      "speakers": [
+        "yazan:answer"
+      ]
+    }
+  },
+  {
+    "id": 7,
+    "lang": "en",
+    "text": "The bigger number always wins.",
+    "expect": {
+      "hurt": {
+        "omar": true,
+        "lina": true
+      }
+    }
+  },
+  {
+    "id": 8,
+    "lang": "en",
+    "text": "Any questions? OK?",
+    "expect": {
+      "check": [
+        "yes_no"
+      ],
+      "chorus": true
+    }
+  },
+  {
+    "id": 9,
+    "lang": "en",
+    "text": "Draw a number line from 0 to 1. 1/3 is closer to 0 than 1/2.",
+    "expect": {
+      "helped": {
+        "lina": [
+          "fully",
+          "partly"
+        ]
+      }
+    }
+  },
+  {
+    "id": 10,
+    "lang": "en",
+    "text": "Sara, why does a bigger bottom number make a smaller fraction?",
+    "expect": {
+      "check": [
+        "question"
+      ],
+      "asked_kid": "sara",
+      "speakers": [
+        "sara:answer"
+      ]
+    }
+  },
+  {
+    "id": 11,
+    "lang": "ar",
+    "text": "لينا، أيُّهما أكبر: النصف أم الثلث؟",
+    "expect": {
+      "check": [
+        "question"
+      ],
+      "asked_kid": "lina",
+      "speakers": [
+        "lina:answer"
+      ]
+    }
+  },
+  {
+    "id": 12,
+    "lang": "ar",
+    "text": "تخيّلي منسفاً واحداً. إذا قسمناه على اثنين يأخذ كل واحد نصفه، وإذا قسمناه على ثلاثة يأخذ كل واحد ثلثه، أي حصة أصغر. لذلك النصف أكبر.",
+    "expect": {
+      "helped": {
+        "lina": [
+          "fully"
+        ],
+        "omar": [
+          "fully"
+        ]
+      },
+      "speakers": [
+        "lina:aha",
+        "omar:aha"
+      ]
+    }
+  },
+  {
+    "id": 13,
+    "lang": "en",
+    "text": "Lina, which is bigger: a half or a third?",
+    "expect": {
+      "check": [
+        "question"
+      ],
+      "asked_kid": "lina",
+      "speakers": [
+        "lina:answer"
+      ]
+    }
+  },
+  {
+    "id": 14,
+    "lang": "en",
+    "text": "Imagine one mansaf. Share it between 2 people and each gets a half. Share it between 3 and each gets a third, a smaller share. So a half is bigger.",
+    "expect": {
+      "helped": {
+        "lina": [
+          "fully"
+        ],
+        "omar": [
+          "fully"
+        ]
+      },
+      "speakers": [
+        "lina:aha",
+        "omar:aha"
+      ]
+    }
+  },
+  {
+    "id": 15,
+    "lang": "ar",
+    "text": "لينة، شو الأكبر: النص ولا التلت؟",
+    "expect": {
+      "check": [
+        "question"
+      ],
+      "asked_kid": "lina",
+      "speakers": [
+        "lina:answer"
+      ]
+    }
+  }
+]
