@@ -4,8 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx server/index.ts",
-    "build": "vite build --config vite.config.ts",
+    "dev": "node scripts/copy-mediapipe.mjs && tsx server/index.ts",
+    "build": "node scripts/copy-mediapipe.mjs && vite build --config vite.config.ts",
     "start": "NODE_ENV=production tsx server/index.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "db:push": "drizzle-kit push --config drizzle.config.ts",
@@ -14,10 +14,12 @@
     "test:setting": "tsx scripts/test-setting.ts",
     "gen:audio": "tsx scripts/gen-audio.ts",
     "gen:avatars": "tsx scripts/gen-avatars.ts",
-    "bench": "tsx scripts/bench.ts"
+    "bench": "tsx scripts/bench.ts",
+    "test:body": "tsx scripts/test-body.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.133.0",
+    "@mediapipe/tasks-vision": "1.1.0",
     "canvas-confetti": "^1.9.4",
     "drizzle-orm": "^0.45.4",
     "express": "^5.3.0",

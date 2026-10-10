@@ -4,7 +4,8 @@ import { and, asc, desc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { KID_IDS, registerTopic, startLevels, topics, uploadedTopic, type TopicDef, type KidId, type Lang, type Levels, type Title } from '../../shared/data';
 import type { ScoreJson } from '../../shared/schemas';
-import { db, kidLevels, kidLines, lessons, packs, turns } from '../db';
+import { bodyTurns, db, kidLevels, kidLines, lessons, packs, turns } from '../db';
+import { bodyNotes, cleanMetrics, type BodyMetrics } from '../../shared/bodyNotes';
 import type { PackInfo } from '../../shared/pack';
 import { transcribe } from '../ai/stt';
 import { scoreWithAI, fallbackFeedback } from '../ai/scorer';
@@ -35,6 +36,8 @@ const CreateBody = z.object({
   deviceId: z.string().max(80).optional(),
   previousLessonId: z.string().uuid().optional(),
   setting: z.unknown().optional(),
+  /** Stand-up mode (camera on the teacher's device; only per-turn numbers are saved). */
+  standup: z.boolean().optional(),
 });
 
 lessonsRouter.post('/lessons', async (req, res) => {
@@ -67,6 +70,7 @@ lessonsRouter.post('/lessons', async (req, res) => {
   const [l] = await db.insert(lessons).values({
     topicId, language: b.language, teacherTitle: b.teacherTitle, deviceId: b.deviceId ?? null,
     attemptNo, previousLessonId: b.previousLessonId ?? null, packId, planJson: plan, topicJson, settingJson: setting,
+    ...(b.standup ? { standup: true } : {}),
   }).returning();
   const levels = startLevels(topicId);
   putState({
@@ -83,7 +87,7 @@ lessonsRouter.get('/lessons/:id', async (req, res) => {
   const ts = await db.select().from(turns).where(eq(turns.lessonId, s.id)).orderBy(asc(turns.turnNo));
   const ls = await db.select().from(kidLines).where(eq(kidLines.lessonId, s.id)).orderBy(asc(kidLines.turnNo), asc(kidLines.idx));
   res.json({
-    lesson: { id: lesson.id, topicId: lesson.topicId, language: lesson.language, teacherTitle: lesson.teacherTitle, attemptNo: lesson.attemptNo, ended: !!lesson.endedAt, packId: lesson.packId, plan: (lesson.planJson as Plan | null) ?? null, setting: s.setting },
+    lesson: { id: lesson.id, topicId: lesson.topicId, language: lesson.language, teacherTitle: lesson.teacherTitle, attemptNo: lesson.attemptNo, ended: !!lesson.endedAt, packId: lesson.packId, plan: (lesson.planJson as Plan | null) ?? null, setting: s.setting, standup: !!lesson.standup },
     topic: uploadedTopic(lesson.topicId),
     turnNo: s.turnNo,
     levels: s.levels,
@@ -174,6 +178,7 @@ lessonsRouter.post('/lessons/:id/redo', async (req, res) => {
       await tx.delete(kidLines).where(and(eq(kidLines.lessonId, s.id), eq(kidLines.turnNo, n)));
       await tx.delete(kidLevels).where(and(eq(kidLevels.lessonId, s.id), eq(kidLevels.turnNo, n)));
       await tx.delete(turns).where(and(eq(turns.lessonId, s.id), eq(turns.turnNo, n)));
+      await tx.delete(bodyTurns).where(and(eq(bodyTurns.lessonId, s.id), eq(bodyTurns.turnNo, n)));
     });
   }
   const last = s.lastTranscript;
@@ -300,6 +305,39 @@ lessonsRouter.get('/lessons/:id/replay', async (req, res) => {
       })),
     })),
   });
+});
+
+// ---------- stand-up mode: per-turn body numbers (never video) → body language notes (tips, never scored) ----------
+const BodyBody = z.object({ turnNo: z.number().int().min(1).max(500), metrics: z.unknown() });
+
+lessonsRouter.post('/lessons/:id/body', async (req, res) => {
+  const id = String(req.params.id);
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return void res.status(404).json({ error: 'not found' });
+  const p = BodyBody.safeParse(req.body);
+  const metrics = p.success ? cleanMetrics(p.data.metrics) : null;
+  if (!p.success || !metrics) return void res.status(400).json({ error: 'bad request' });
+  const [l] = await db.select({ standup: lessons.standup }).from(lessons).where(eq(lessons.id, id)).limit(1);
+  if (!l) return void res.status(404).json({ error: 'not found' });
+  if (!l.standup) return void res.status(409).json({ error: 'not a stand-up lesson' });
+  // only for a spoken turn that exists
+  const [t] = await db.select({ turnNo: turns.turnNo }).from(turns).where(and(eq(turns.lessonId, id), eq(turns.turnNo, p.data.turnNo))).limit(1);
+  if (!t) return void res.status(409).json({ error: 'no such turn' });
+  await db.insert(bodyTurns).values({ lessonId: id, turnNo: p.data.turnNo, metrics })
+    .onConflictDoUpdate({ target: [bodyTurns.lessonId, bodyTurns.turnNo], set: { metrics } });
+  res.json({ ok: true });
+});
+
+lessonsRouter.get('/lessons/:id/body', async (req, res) => {
+  const id = String(req.params.id);
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return void res.status(404).json({ error: 'not found' });
+  const [l] = await db.select({ standup: lessons.standup, topicId: lessons.topicId }).from(lessons).where(eq(lessons.id, id)).limit(1);
+  if (!l) return void res.status(404).json({ error: 'not found' });
+  if (!l.standup) return void res.json({ standup: false, result: null });
+  const ts = await db.select({ turnNo: turns.turnNo, transcript: turns.transcript, checkType: turns.checkType }).from(turns).where(eq(turns.lessonId, id)).orderBy(asc(turns.turnNo));
+  const bs = await db.select().from(bodyTurns).where(eq(bodyTurns.lessonId, id));
+  const byTurn = new Map(bs.map((b) => [b.turnNo, b.metrics as BodyMetrics]));
+  const result = bodyNotes(ts.map((t) => ({ ...t, metrics: byTurn.get(t.turnNo) ?? null })), { topicId: l.topicId });
+  res.json({ standup: true, result });
 });
 
 lessonsRouter.get('/lessons/:id/debug', async (req, res) => {

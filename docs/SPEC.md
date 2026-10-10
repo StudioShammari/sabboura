@@ -2624,6 +2624,20 @@ A teacher can practise with a class like theirs. A setting describes the room's 
 
 **Checks.** `pnpm test:setting` (default prompts unchanged, boys «يوسف» to asked_kid lina, back-row timeline, girls, exam focus), `pnpm test:judge`, `pnpm test:plan`.
 
+## v4: Stand-up mode and body language notes
+
+An optional way to practise standing up, like a real class. It is off by default; normal hold-to-talk is unchanged, and stage mode (`?demo=1`) never turns it on.
+
+**Turning it on.** A switch on the Plan page (`sabboura.standup.v1` remembers the choice). Turning it on opens "Set up your camera": a mirrored preview with a body outline, live chips (in frame, face visible, waist visible, lighting OK), a short checklist, a 3-second calibration of the teacher's natural pose, and a hands-free switch. Closing without calibrating turns stand-up mode off, and so does any camera error ("Continue without stand-up mode"). Turning it off stops the camera at once.
+
+**In the classroom.** Talk toggles with Space, PageDown or a presentation clicker (press to start, press to stop), or hands-free (the mic starts above about −40 dB and stops after 1.4 s of quiet, and never listens while a kid or a sound is playing). A small mirrored self-view sits in the dock with an in-frame badge and an optional live nudge (back to the class, eyes on your notes, hands in pockets; at most one per turn, never in Calm mode). If the camera stops, the lesson goes on without notes. Typing mode and stage mode never use the camera.
+
+**Privacy.** MediaPipe Pose and Face landmarkers run in the browser (models in `public/mediapipe`). Video never leaves the device and is never recorded. Only per-turn numbers are saved (`body_turns`: share of talking time facing the class, head down, looking away, back turned, hands together in front, hands hidden, arms crossed, gesturing, hands in view, face touches, and the same flags for the last 3 s). Redo deletes that turn's numbers.
+
+**Notes.** One pure function (`shared/bodyNotes.ts`) turns the saved numbers into at most 3 notes in priority order (asking, back, reading, looking down, pockets, crossed, still, nonstop, face), one strength when true, and 4 small stats. Every threshold is in `shared/bodyRules.ts`. Only turns where the teacher was in frame for at least 60% of talking time count, and all percentages are of in-frame time. If most turns fall under 60%, the card shows only "We couldn't see you for most of the lesson". The review card sits after "Your plan vs your lesson", only for stand-up lessons, and is hidden in the shared view. Body language notes never touch the score, the judge, the badges, the kids or the plan checklist. "Teach it again" on a stand-up lesson goes back through the Plan page so the camera is set up again.
+
+**Tuning and checks.** `/dev/body` (hidden) shows the landmarks, live features, the rules that are firing and a slider for every threshold, with "Copy thresholds". `pnpm test:body` runs the notes and features on synthetic landmark sequences (crossed, pockets, back, reading, asking, nonstop, out of frame, a normal teacher).
+
 ## Sources
 
 - Rosenshine, "Principles of Instruction," *American Educator*, 2012: <https://www.aft.org/sites/default/files/periodicals/Rosenshine.pdf>

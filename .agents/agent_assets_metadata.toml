@@ -70,3 +70,87 @@ mtime_ms = 1791643483864
 storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:2e97b30e-7cb5-420e-992f-61305f749ba7/2339eec0-bbd0-4788-a9b3-8b91a8f3817d/b9906596-f6e4-4646-8eaf-38d1a316ebbb"
 storage_version_token = "1791643496054341"
 content_type = "image/jpeg"
+
+[[outputs]]
+id = "iAJ2tCjZNMQGoDWtSTb9R"
+uri = "file://artifacts/sabboura/generated-artifacts/standup/1-plan-ar.png"
+type = "image"
+title = "Plan page: stand-up switch (Arabic)"
+description = "The switch sits beside \"Your class today\". The camera stays off until it is turned on."
+logical_id = "33122aa9-6d64-46b8-bc8b-721d47cfadb9"
+content_hash = "sha256:4dcc49f10c6b140807cec8c132650d105157de76abd4c7235bf92ef855627a29"
+size = 187919
+mtime_ms = 1791649173617
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:2e97b30e-7cb5-420e-992f-61305f749ba7/33122aa9-6d64-46b8-bc8b-721d47cfadb9/e3bd04ca-82d8-4c02-a2f2-10aa220bee53"
+storage_version_token = "1791649201270748"
+content_type = "image/png"
+
+[[outputs]]
+id = "MVc38Zx0uVP190rfbMSwr"
+uri = "file://artifacts/sabboura/generated-artifacts/standup/2-camera-setup-en.png"
+type = "image"
+title = "Camera setup (English)"
+description = "Chromium fake camera: preview, live chips, checklist, calibration, hands-free switch."
+logical_id = "2e6a1b97-f42c-4168-aa21-bd903ea3cc94"
+content_hash = "sha256:78b5aa310271ad1aac0ee254cda96288370140e687d98c9bf8c19faf799e1176"
+size = 151758
+mtime_ms = 1791649173692
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:2e97b30e-7cb5-420e-992f-61305f749ba7/2e6a1b97-f42c-4168-aa21-bd903ea3cc94/c283fffc-8265-446c-9ec8-8fa86b19861f"
+storage_version_token = "1791649202527282"
+content_type = "image/png"
+
+[[outputs]]
+id = "MWMyBbm9WDFS3hQewFHP-"
+uri = "file://artifacts/sabboura/generated-artifacts/standup/3-classroom-ar.png"
+type = "image"
+title = "Stand-up classroom (Arabic)"
+description = "Press-to-toggle label, hands-free switch, and a mirrored self-view with the nudges switch and in-frame badge."
+logical_id = "3f68797a-f842-46de-8511-fa26b5ada429"
+content_hash = "sha256:d2675f89ed028d5b1b7c9ff2065a7403297829a2c70d13f888b0c23f652e917a"
+size = 183690
+mtime_ms = 1791649173708
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:2e97b30e-7cb5-420e-992f-61305f749ba7/3f68797a-f842-46de-8511-fa26b5ada429/ef6cf181-6475-4d4c-be64-09cc0eed06fd"
+storage_version_token = "1791649203877238"
+content_type = "image/png"
+
+[[outputs]]
+id = "SuK09XsNKTcpjJ-70cT5d"
+uri = "file://artifacts/sabboura/generated-artifacts/standup/4-review-ar.png"
+type = "image"
+title = "Body language notes card (Arabic)"
+description = "4 stats, the strength line, 3 notes with turn chips (turn 2 opened), and the footnote."
+logical_id = "a0ad7feb-5a4c-416c-949c-35be84564c27"
+content_hash = "sha256:eafe8da8145f8066c6b835bc6c00ed08543be3f0a160bccd777565c2cb47c2d0"
+size = 125484
+mtime_ms = 1791649173752
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:2e97b30e-7cb5-420e-992f-61305f749ba7/a0ad7feb-5a4c-416c-949c-35be84564c27/644f6c93-6f27-4473-a254-a9fb48556dcf"
+storage_version_token = "1791649205150542"
+content_type = "image/png"
+
+[[outputs]]
+id = "M-vkrGby5WTcr0ux4N18Q"
+uri = "file://artifacts/sabboura/generated-artifacts/standup/4-review-en.png"
+type = "image"
+title = "Body language notes card (English)"
+description = "The same card in English."
+logical_id = "aaa970c1-e791-4a4f-98b4-9916a688a0e7"
+content_hash = "sha256:9e6d57c2f6510de5a7cb74566fc75a1f6e659f29ee104515783c01acf5ef68be"
+size = 112863
+mtime_ms = 1791649173769
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:2e97b30e-7cb5-420e-992f-61305f749ba7/aaa970c1-e791-4a4f-98b4-9916a688a0e7/2afd5bf1-bf89-493b-84e1-769e67c4095b"
+storage_version_token = "1791649206407550"
+content_type = "image/png"
+
+[[outputs]]
+id = "HRQko1aIcxDfeQkv0tzyN"
+uri = "file://artifacts/sabboura/generated-artifacts/standup/5-dev-body.png"
+type = "image"
+title = "/dev/body tuning page"
+description = "Landmarks canvas, live flags, and a slider for every threshold, with Copy thresholds."
+logical_id = "3c6220e2-348c-4e45-828b-922d9bd86f20"
+content_hash = "sha256:0af94357dca998787e7ca0ae34d19276fcb928b6cdadd36178665d4470cb6028"
+size = 159130
+mtime_ms = 1791649173776
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:2e97b30e-7cb5-420e-992f-61305f749ba7/3c6220e2-348c-4e45-828b-922d9bd86f20/cbd3f34a-9ea9-48ad-896b-2cc13be0e85a"
+storage_version_token = "1791649207649923"
+content_type = "image/png"

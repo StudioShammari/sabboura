@@ -20,7 +20,10 @@ function noise(dur: number, f0: number, f1: number, gain: number, at = 0) {
   const g = c.createGain(); g.gain.setValueAtTime(gain, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
   s.connect(f); f.connect(g); g.connect(c.destination); s.start(t);
 }
-const safe = (fn: () => void) => { if (!on()) return; try { fn(); } catch { /* audio unavailable */ } };
+let sfxUntil = 0;
+/** True for a moment after any sound effect (hands-free listening ignores it). */
+export const sfxBusy = () => performance.now() < sfxUntil;
+const safe = (fn: () => void) => { if (!on()) return; sfxUntil = performance.now() + 1000; try { fn(); } catch { /* audio unavailable */ } };
 
 export const sfx = {
   micOn: () => safe(() => tone(440, 0, 0.09, 'sine', 0.08, 880)),

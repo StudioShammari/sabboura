@@ -19,3 +19,4 @@ A flight simulator for teachers: practise a lesson on a class of five AI kids. F
 13) The plan checklist never changes the score. It runs beside the scorer and only reports.
 14) Never show which kid holds which mistake before the end reveal. The Plan page shows nameless quotes and personality lines only.
 15) Class settings change conditions only (size, group, language mix, exam focus), never kids' abilities. The default setting stays byte-identical.
+16) Stand-up mode: the camera stays on the device, nothing is recorded, body language notes are never scored, and normal mode stays unchanged.

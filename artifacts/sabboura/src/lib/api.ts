@@ -3,6 +3,7 @@ import type { PackStatus } from '@shared/pack';
 import type { ScoreJson } from '@shared/schemas';
 import type { Plan, PlanCheck } from '@shared/plan';
 import type { ClassSetting } from '@shared/setting';
+import type { BodyMetrics, BodyResult } from '@shared/bodyNotes';
 
 async function json<T>(res: Response): Promise<T> {
   const ct = res.headers.get('content-type') ?? '';
@@ -13,11 +14,11 @@ const post = (url: string, body?: unknown, signal?: AbortSignal) =>
   fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body), signal });
 
 export interface CreatedLesson { lessonId: string; turnNo: number; levels: Levels }
-export const createLesson = (b: { topicId?: string; packId?: string; plan?: Plan; language: Lang; teacherTitle: Title; deviceId?: string; previousLessonId?: string; setting?: ClassSetting }) =>
+export const createLesson = (b: { topicId?: string; packId?: string; plan?: Plan; language: Lang; teacherTitle: Title; deviceId?: string; previousLessonId?: string; setting?: ClassSetting; standup?: boolean }) =>
   post('/api/lessons', b).then((r) => json<CreatedLesson>(r));
 
 export interface LessonInfo {
-  lesson: { id: string; topicId: string; language: Lang; teacherTitle: Title; attemptNo: number; ended: boolean; packId: string | null; plan: Plan | null; setting?: ClassSetting };
+  lesson: { id: string; topicId: string; language: Lang; teacherTitle: Title; attemptNo: number; ended: boolean; packId: string | null; plan: Plan | null; setting?: ClassSetting; standup?: boolean };
   turnNo: number;
   /** Large classes: the Back of the class level now (0-3). */
   backRow?: number | null;
@@ -56,3 +57,7 @@ export interface PlanCheckResp { setting?: ClassSetting; packId: string | null; 
 export const getPlanCheck = (id: string) => fetch(`/api/lessons/${id}/plan-check`).then((r) => json<PlanCheckResp>(r));
 
 export const getPack = (id: string) => fetch(`/api/packs/${id}`).then((r) => json<PackStatus>(r));
+
+/** Stand-up mode: one spoken turn's body numbers (never video). */
+export const postBody = (id: string, turnNo: number, metrics: BodyMetrics) => post(`/api/lessons/${id}/body`, { turnNo, metrics }).then((r) => json<{ ok: true }>(r));
+export const getBody = (id: string) => fetch(`/api/lessons/${id}/body`).then((r) => json<{ standup: boolean; result: BodyResult | null }>(r));

@@ -12,13 +12,19 @@ import { MicButton } from '@/components/MicButton';
 import { DebugPanel } from '@/components/DebugPanel';
 import { fmtNum, useT, tr, trf, type Key } from '@/i18n';
 import { SettingProvider } from '@/lib/classSetting';
-import { endLesson, getLesson, redoTurn, transcribe } from '@/lib/api';
+import { endLesson, getLesson, postBody, redoTurn, transcribe } from '@/lib/api';
 import type { Plan } from '@shared/plan';
 import { closeMic, fadeOutAll, getMic, micName, openMic, preloadLesson, unlockAudio } from '@/lib/audio';
 import { Recorder } from '@/lib/recorder';
 import { sfx, setMurmur } from '@/lib/sfx';
 import { getSettings, setSettings, useSettings } from '@/lib/store';
 import { playChorus, playLocalFailsafe, playQuestion, playTurn, type TurnUI } from '@/lib/turnPlayer';
+import { SelfTile, type Nudge } from '@/components/SelfTile';
+import { getCalib, getCamera, onFrame, setCalib, startCamera, stopCamera, useCamera } from '@/lib/body/detector';
+import { TurnCollector } from '@/lib/body/features';
+import { HANDS_FREE, VoiceGate } from '@/lib/body/handsfree';
+import { loadCalib, saveCalib, setStandup, useStandup } from '@/lib/body/standup';
+import type { BodyMetrics } from '@shared/bodyNotes';
 
 type Phase = 'idle' | 'recording' | 'processing' | 'playing';
 type Evidence = { turn: number; text: string };
@@ -69,6 +75,19 @@ export default function Classroom() {
   const [debugOpen, setDebugOpen] = useState(qs.get('debug') === '1');
   const [lastTimings, setLastTimings] = useState<TimingsEvent | null>(null);
   const [eventLog, setEventLog] = useState<string[]>([]);
+  // stand-up mode (only for lessons started with it; never in stage mode)
+  const [standup, setStandupLesson] = useState(false);
+  const standupRef = useRef(false);
+  const sp = useStandup();
+  const cam = useCamera();
+  const collector = useRef(new TurnCollector());
+  const [inFrame, setInFrame] = useState(false);
+  const [nudge, setNudge] = useState<Nudge | null>(null);
+  const nudged = useRef(false);
+  const nudgeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const nudgesOn = sp.nudges && !settings.calm;
+  const nudgesOnRef = useRef(nudgesOn);
+  nudgesOnRef.current = nudgesOn;
 
   const genRef = useRef(0);
   const abortRef = useRef<() => void>(() => {});
@@ -105,6 +124,14 @@ export default function Classroom() {
       const last = l.turns[l.turns.length - 1];
       if (last) setTranscript(last.transcript);
       setPlan(l.lesson.plan);
+      const su = !!l.lesson.standup && !demo && !typeMode;
+      standupRef.current = su; setStandupLesson(su);
+      if (su) {
+        // the calibration pose belongs to this lesson: keep the one from setup, or bring it back after a reload
+        const stored = loadCalib(id);
+        if (stored) setCalib(stored); else { const c = getCalib(); if (c) saveCalib(id, c); }
+        void startCamera();
+      }
       setNeedTap(l.turnNo === 0 && !getMic() && !typeMode);
       if (typeMode) setTyping(true);
       setReady(true);
@@ -317,6 +344,7 @@ export default function Classroom() {
       rec.onLevel = (i) => { setLevel(i.level); setInLevel(i.level); };
       rec.start();
       recRef.current = rec;
+      if (standupRef.current) { collector.current.start(performance.now()); nudged.current = false; }
       sfx.micOn();
       setPhaseBoth('recording');
       setRecElapsed(0);
@@ -336,6 +364,9 @@ export default function Classroom() {
     if (recTimer.current) clearInterval(recTimer.current);
     setCancelling(false); setLevel(0); setRecElapsed(0);
     sfx.micOff();
+    // stand-up mode: this turn's body numbers (only while the camera is running)
+    let body: BodyMetrics | null = null;
+    if (standupRef.current) { if (!cancel && getCamera().status === 'on') body = collector.current.finish(performance.now()); else collector.current.cancel(); }
     if (cancel) { rec.cancel(); setPhaseBoth('idle'); return; }
     setPhaseBoth('processing');
     const res = await rec.stop(250);
@@ -347,7 +378,9 @@ export default function Classroom() {
     try {
       const t = await transcribe(id, res.blob, res.mime, res.durationMs);
       if (t.empty || !t.transcript.trim()) { setHeard(false); setNotice(tr('cantHear', getSettings().lang)); await localFailsafe(); return; }
+      const before = turnNoRef.current;
       await submit(t.transcript, 'voice', res.durationMs / 1000);
+      if (body && turnNoRef.current > before) void postBody(id, turnNoRef.current, body).catch(() => {});
     } catch {
       setHeard(false);
       await localFailsafe();
@@ -378,8 +411,8 @@ export default function Classroom() {
         e.preventDefault();
         if (e.repeat || spaceDown.current) return;
         spaceDown.current = true;
-        if (demo || getSettings().tap) toggleRec(); else void startRec();
-      } else if (demo && e.code === 'PageDown') { e.preventDefault(); toggleRec(); }
+        if (demo || getSettings().tap || standupRef.current) toggleRec(); else void startRec();
+      } else if ((demo || standupRef.current) && e.code === 'PageDown') { e.preventDefault(); toggleRec(); }
       else if (demo && e.code === 'PageUp') { e.preventDefault(); act.current.redo(); }
       else if (demo && e.shiftKey && /^Digit[1-4]$/.test(e.code)) { e.preventDefault(); act.current.script(Number(e.code.slice(5))); }
       else if (e.code === 'KeyF') document.fullscreenElement ? void document.exitFullscreen() : void document.documentElement.requestFullscreen?.().catch(() => {});
@@ -401,7 +434,7 @@ export default function Classroom() {
     const up = (e: KeyboardEvent) => {
       if (e.code !== 'Space') return;
       spaceDown.current = false;
-      if (!demo && !getSettings().tap && phaseRef.current === 'recording') void stopRec(false);
+      if (!demo && !getSettings().tap && !standupRef.current && phaseRef.current === 'recording') void stopRec(false);
     };
     window.addEventListener('keydown', down); window.addEventListener('keyup', up);
     return () => { window.removeEventListener('keydown', down); window.removeEventListener('keyup', up); };
@@ -434,7 +467,41 @@ export default function Classroom() {
     return () => { clearTimeout(t); window.removeEventListener('mousemove', f); };
   }, [stage]);
 
+  // ---------- stand-up mode ----------
+  // body features feed the turn's numbers, the in-frame dot and at most one quiet nudge per turn
+  useEffect(() => {
+    if (!standup) return;
+    let shown = false, streak = 0;
+    return onFrame((f) => {
+      collector.current.add(f.t, f.live);
+      if (f.raw.inFrame !== shown) { if (++streak >= 4) { shown = f.raw.inFrame; streak = 0; setInFrame(shown); } } else streak = 0;
+      if (phaseRef.current !== 'recording' || nudged.current || !nudgesOnRef.current) return;
+      const k: Nudge | null = f.live.backTurnedOn ? 'back' : f.live.readingOn ? 'notes' : f.live.handsHiddenOn ? 'pockets' : null;
+      if (!k) return;
+      nudged.current = true;
+      setNudge(k); clearTimeout(nudgeTimer.current);
+      nudgeTimer.current = setTimeout(() => setNudge(null), 3000);
+    });
+  }, [standup]);
+  useEffect(() => { if (standup && cam.status === 'error') setNotice(tr('camStopped', getSettings().lang)); }, [standup, cam.status]);
+  // hands-free: the mic level starts and stops turns; paused while the class talks, while waiting for it, and while typing or in a dialog
+  const gateBlock = useRef(false);
+  gateBlock.current = typing || confirmEnd || needTap || !!micErr || planOpen || ending;
+  useEffect(() => {
+    if (!standup || !sp.handsFree || !ready || needTap) return;
+    const stream = getMic();
+    if (!stream) return;
+    const g = new VoiceGate(stream, {
+      canListen: () => phaseRef.current === 'idle' && !gateBlock.current,
+      recording: () => phaseRef.current === 'recording',
+      onStart: () => void startRec(),
+      onStop: () => { const r = recRef.current; if (r) void stopRec(r.elapsedMs - HANDS_FREE.stopMs < HANDS_FREE.minMs); },
+    });
+    return () => g.dispose();
+  }, [standup, sp.handsFree, ready, needTap, micErr, startRec, stopRec]);
+
   useEffect(() => () => {
+    clearTimeout(nudgeTimer.current); stopCamera();
     genRef.current++; abortRef.current(); fadeOutAll(50); recRef.current?.dispose(); if (!keepMic.current) closeMic(); wake.current?.release().catch(() => {});
     if (recTimer.current) clearInterval(recTimer.current);
   }, []);
@@ -508,12 +575,13 @@ export default function Classroom() {
   const micLabel =
     phase === 'recording' ? (cancelling ? tr('releaseCancel', lang) : recElapsed > 35000 ? tr('tenLeft', lang) : tr('listening', lang))
     : phase === 'processing' ? tr('thinking', lang)
+    : standup ? tr(sp.handsFree ? 'standupIdleFree' : 'standupIdleToggle', lang)
     : settings.tap ? tr('holdTap', lang) : tr('hold', lang);
   const stamp = lang === 'ar' ? 'الصف فهم!' : 'Class got it!';
 
   return (
     <SettingProvider value={setting}>
-    <main className={`classroom ${stage ? 'stage' : ''} ${hideCursor ? 'stage-hide-cursor' : ''} ${typing ? 'typing' : ''}`} dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+    <main className={`classroom ${stage ? 'stage' : ''} ${standup ? 'standup' : ''} ${hideCursor ? 'stage-hide-cursor' : ''} ${typing ? 'typing' : ''}`} dir={lang === 'ar' ? 'rtl' : 'ltr'}>
       <header className="topbar">
         <a className="logo" href="/" onClick={(e) => { e.preventDefault(); if (turnNo > 0) setConfirmEnd(true); else nav('/'); }}>{lang === 'ar' ? 'سبّورة' : 'Sabboura'}</a>
         <div className="center">
@@ -576,10 +644,12 @@ export default function Classroom() {
           <button className="btn btn-redo" onClick={redo} disabled={phase !== 'idle' || turnNo === 0}><RotateCcw size={18} /> <span className="txt">{tr('redo', lang)}</span></button>
         </div>
         <div className="mic-wrap">
-          <MicButton mode={settings.tap || demo ? 'tap' : 'hold'} recording={phase === 'recording'} cancelling={cancelling} elapsedMs={recElapsed} level={level}
+          <MicButton mode={settings.tap || demo || standup ? 'tap' : 'hold'} recording={phase === 'recording'} cancelling={cancelling} elapsedMs={recElapsed} level={level}
             disabled={phase === 'processing'} label={micLabel} onStart={() => void startRec()} onStop={(c) => void stopRec(c)} onCancelHover={setCancelling} />
           <div className={`mic-label ${phase === 'recording' ? 'rec' : ''}`}>{micLabel}</div>
-          <label className="tap-switch" title={tr('tapModeHint', lang)}><input type="checkbox" checked={settings.tap} onChange={(e) => setSettings({ tap: e.target.checked })} /> <span>{tr('tapMode', lang)}</span></label>
+          {standup
+            ? <label className="tap-switch" title={tr('handsFreeHint', lang)}><input type="checkbox" role="switch" checked={sp.handsFree} onChange={(e) => setStandup({ handsFree: e.target.checked })} /> <span>{tr('handsFree', lang)}</span></label>
+            : <label className="tap-switch" title={tr('tapModeHint', lang)}><input type="checkbox" checked={settings.tap} onChange={(e) => setSettings({ tap: e.target.checked })} /> <span>{tr('tapMode', lang)}</span></label>}
         </div>
         {typing ? (
           <div className="typebox">
@@ -593,7 +663,9 @@ export default function Classroom() {
           </div>
         ) : (
           <div className="side end">
-            <button className="btn btn-type" onClick={() => setTyping(true)}><Keyboard size={18} /> <span className="txt">{tr('typeBtn', lang)}</span></button>
+            {standup
+              ? <SelfTile lang={lang} inFrame={inFrame} nudge={nudge} nudgesOn={nudgesOn} calm={settings.calm} onNudges={(on) => setStandup({ nudges: on })} />
+              : <button className="btn btn-type" onClick={() => setTyping(true)}><Keyboard size={18} /> <span className="txt">{tr('typeBtn', lang)}</span></button>}
           </div>
         )}
       </footer>

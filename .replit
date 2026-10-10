@@ -1,4 +1,4 @@
-modules = ["nodejs-24", "python-base-3.13"]
+modules = ["nodejs-24", "python-base-3.13", "postgresql-16"]
 
 [workflows]
 runButton = "Project"
@@ -25,3 +25,6 @@ TTS_MODEL = "gpt-audio-mini"
 deploymentTarget = "vm"
 run = ["pnpm", "--filter", "@workspace/sabboura", "run", "start"]
 build = ["pnpm", "--filter", "@workspace/sabboura", "run", "build"]
+
+[nix]
+channel = "stable-25_05"

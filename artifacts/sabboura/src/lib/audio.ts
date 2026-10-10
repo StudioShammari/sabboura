@@ -120,6 +120,8 @@ export async function preloadLesson(topicId: string, lang: Lang, title: Title) {
 // ---- playback ----
 export interface Playing { done: Promise<void>; stop: () => void }
 const active = new Set<{ src: AudioBufferSourceNode; stop: () => void }>();
+/** True while any kid voice (or other clip) is playing. Hands-free listening pauses on it. */
+export const audioBusy = () => active.size > 0;
 export function playBuffer(buf: AudioBuffer, opts: { gain?: number; delayMs?: number; onStart?: () => void; rate?: number } = {}): Playing {
   const c = getCtx();
   const src = c.createBufferSource();

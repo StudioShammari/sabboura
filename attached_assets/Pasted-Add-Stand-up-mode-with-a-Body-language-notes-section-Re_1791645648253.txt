@@ -1,0 +1,185 @@
+Add "Stand-up mode" with a "Body language notes" section. Read this whole message first, then do Parts A → E in order.
+
+**What it is.** The teacher practises standing up, like in a real class, 1.5–2 m from the laptop. The laptop camera watches the teacher's upper body and face while they talk. The review then adds "ملاحظات لغة الجسد / Body language notes", each tied to the turn where it happened. The notes cover:
+- back turned to the class;
+- reading from notes;
+- looking down or away while asking a question;
+- hands in pockets or out of sight;
+- arms crossed;
+- hands that barely move, or never stop;
+- touching the face.
+
+## Ground rules
+
+- **Off by default.**
+  - Normal mode (hold-to-talk at the desk) must behave exactly as it does today.
+  - Stage mode (?demo=1) never turns it on.
+- **Body language notes are tips, never part of the score.** They never change the judge, the badges, the kids or the plan checklist.
+- **Privacy.**
+  - Video never leaves the device, and it is never recorded or stored. Only per-turn numbers are saved.
+  - No Permissions-Policy header may block the camera.
+- **Inclusion.**
+  - Never shame. Notes are gentle, optional and easy to switch off.
+  - Teachers move differently (disability, culture, style), so notes fire only on clear extremes.
+- **Design system.**
+  - Ink and ink-blue only for everything new; status colours stay on kid badges.
+  - No emoji; lucide icons only.
+  - Arabic RTL rules, Western digits, numbers inside `<bdi dir="ltr">`.
+  - All copy goes in i18n (Arabic and English).
+- **Database changes are additive only.**
+- **Testing the camera:** it may not work inside Replit's Preview pane (an iframe). Test in a new tab and on the published URL.
+- **After each part:**
+  - run `pnpm test:judge -- --rows 1,2,3,4,7` and `pnpm test:plan`;
+  - take screenshots (1280×720, Arabic and English);
+  - show me.
+
+## PART A — The library and the detector
+
+1. **The library.**
+   - Use Google's open-source MediaPipe Tasks Vision (`@mediapipe/tasks-vision`, Apache-2.0), pinned to the version you install.
+   - Serve its wasm files and the model files (`pose_landmarker_full.task`, `face_landmarker.task`) from `/public/mediapipe`, so it works on the published URL without third-party CDNs.
+   - These are downloaded open-source model files, not generated assets.
+2. **`client/src/lib/body/detector.ts`.**
+   - Open the camera once: `getUserMedia` video, 1280×720, `facingMode: 'user'`.
+   - Run PoseLandmarker in VIDEO mode at about 12 fps, with the GPU delegate and a CPU fallback.
+   - Drop to 6 fps if a frame takes more than 25 ms, and pause when the tab is hidden.
+   - **Pose is the main signal,** because it works at 1.5–2 m.
+   - **Head direction:**
+     - when the face is at least 80 px wide, use FaceLandmarker to refine head direction;
+     - otherwise, estimate it from the pose's nose, eyes and ears, relative to the calibration pose.
+3. **`client/src/lib/body/features.ts`.**
+   - Pure functions, run per frame. All distances are normalised by shoulder width.
+   - Features: inFrame, waistVisible, faceVisible, headDown, lookingAway, backTurned, handsTogetherInFront, handsHidden, armsCrossed, wristSpeed, faceTouch.
+   - **Starting rules:**
+
+     | Feature | Starting rule |
+     |---|---|
+     | backTurned | Both shoulders visible, but the nose and both eyes have visibility < 0.5 and no face is found, for ≥ 1 s |
+     | headDown | Head pitched ≥ 15° below the calibration pose, or the equivalent drop of the nose below the eye–ear line |
+     | lookingAway | Head yaw ≥ 35° from calibration, or shoulder width < 60% of calibration (turned sideways) |
+     | handsTogetherInFront | Wrists closer than 0.5 shoulder widths, between shoulders and hips, in front of the torso (holding paper or a phone) |
+     | handsHidden | Hips visible, and both wrists either not visible (visibility < 0.4) or within 0.35 shoulder widths of their hip, for ≥ 5 s |
+     | armsCrossed | Each wrist within 0.6 shoulder widths of the opposite elbow, between shoulders and hips, for ≥ 3 s |
+     | gesturing | Either visible wrist, above the hips, moving faster than 0.6 shoulder widths per second (smoothed over 300 ms) |
+     | faceTouch | A wrist within 0.5 shoulder widths of the nose, above the shoulders. Count each new touch (at least 1.5 s apart) |
+
+   - Put every threshold in ONE file, `shared/bodyRules.ts`, so we can tune them.
+4. **Per-turn metrics.**
+   - Collect them ONLY while the teacher is talking (recording on).
+   - For each spoken turn, save:
+     - **talkMs**, and **seenPct** (the share of frames with the person in frame);
+     - the % of talking time for headDown, lookingAway, backTurned, handsTogetherInFront, handsHidden, armsCrossed and gesturing;
+     - **faceTouches**;
+     - the same flags for the LAST 3 seconds of the turn (questions usually come at the end).
+   - Typed turns have no body metrics.
+
+## PART B — Setting up stand-up mode
+
+1. **The switch on the Plan page:** "وضع الوقوف / Stand-up mode", with the line "تدريب وقوفاً مثل الصف الحقيقي، مع ملاحظات لغة الجسد / Practise standing, like a real class, with body language notes". Remember the choice in localStorage (inside try/catch).
+2. **Turning it on opens "جهّز الكاميرا / Set up your camera".**
+   - A mirrored camera preview with a faint waist-up body outline.
+   - Live chips (an ink ✓, or grey): in frame, face visible, waist visible, lighting OK (the frame isn't too dark or backlit).
+   - The checklist:
+     - "الكاميرا بمستوى الصدر (اللابتوب على كتب أو رف) / Camera at chest height (laptop on books or a shelf)"
+     - "ارجع لورا 1.5–2 متر لحتى يبين خصرك / Step back 1.5–2 m until your waist shows"
+     - "الضو قدّامك، مش وراك / Light in front of you, not behind you"
+     - "مايك قريب منك (سماعات أو مايك مشبوك) / A mic close to you (earbuds or a clip mic)"
+     - "للحكي: ريموت عرض أو PageDown، أو الحكي بدون إيدين / To talk: a presentation clicker or PageDown, or hands-free"
+   - **Calibration:**
+     - "وقّف بشكل طبيعي وطلّع عالشاشة 3 ثواني / Stand naturally and look at the screen for 3 seconds";
+     - then a 3-2-1 countdown;
+     - the calibration pose is saved for this lesson.
+   - **Two lines to show:**
+     - "الكاميرا بتضل على جهازك. ما منسجّل ولا منبعث فيديو؛ منحفظ بس أرقام زي «وجهك للصف 70% من الوقت». / Your camera stays on this device. Nothing is recorded or sent; we only keep numbers like 'facing the class 70% of the time'."
+     - "ملاحظات لغة الجسد نصائح اختيارية، وما بتدخل بالنتيجة. / Body language notes are optional tips and never part of your score."
+   - **If the camera is blocked or missing,** show a friendly card and offer to continue without stand-up mode.
+3. **Data:** lessons get a nullable boolean `standup`, and POST /api/lessons accepts it.
+
+## PART C — Teaching in stand-up mode
+
+1. **Hands-free talking.** This applies only in stand-up mode; normal hold-to-talk stays untouched.
+   - **Default: toggle talk.** A presentation clicker, PageDown or Space: one press starts, the next stops. While recording, show a big, readable "الصف بسمعك… / The class is listening…" state.
+   - **Option "الحكي بدون إيدين / Hands-free":**
+     - start recording when the mic level stays above −40 dBFS for 150 ms;
+     - stop after 1.4 s below −48 dBFS;
+     - ignore anything under 1 s, and cap a turn at 45 s.
+   - **Pause hands-free listening:**
+     - while kids' audio plays, and for 400 ms after;
+     - while waiting for the class.
+
+     That way the kids' voices never trigger it.
+2. **Big-text layout:** use the spec's stage font sizes, so the class is readable from 2 m.
+3. **Self-view tile.**
+   - In stand-up mode, a small mirrored self-view tile (about 200×112) takes the place of the "Type instead" button. Typing stays available with the T key.
+   - The tile shows an ink dot with "مبين ✓ / In frame ✓", or a grey "مش مبين / Not in frame".
+   - **Optional live nudges:** a switch on the tile, on by default and off in Calm mode.
+     - One quiet ink text chip shows on the tile for 3 s, at most one per turn.
+     - Examples: "ظهرك للصف / Your back is to the class", "عيونك عالورقة / Eyes on your notes", "إيديك بجيوبك / Hands in pockets".
+   - Nothing else on screen changes.
+4. **Saving per-turn metrics.**
+   - After each turn's `done`, POST `/api/lessons/:id/body` with `{turnNo, metrics}`.
+   - New table: `body_turns(lesson_id uuid fk cascade, turn_no int, metrics jsonb, unique(lesson_id, turn_no))`.
+   - Redo deletes the redone turn's row.
+
+## PART D — The review: "ملاحظات لغة الجسد / Body language notes"
+
+1. **`shared/bodyNotes.ts`.**
+   - ONE pure function turns the saved per-turn metrics, plus each turn's transcript and check type, into notes.
+   - Only turns where the teacher was in frame for ≥ 60% of talking time count.
+   - The thresholds come from `shared/bodyRules.ts`.
+
+| Note | Fires when | English | العربية |
+|---|---|---|---|
+| asking | A turn with check type question or yes_no, where the last 3 s were headDown, lookingAway or backTurned | "When you asked «{first 8 words}…», you weren't looking at the class. Next time: look at them when you ask, then wait." | "لما سألت «{أول 8 كلمات}…» ما كان نظرك على الصف. المرة القادمة: النظر للصف أثناء السؤال، ثم الانتظار." |
+| back | backTurned ≥ 20% of a turn's talking time | "Your back was to the class in turn {n}. Next time: face the class while you explain." | "كان ظهرك للصف في المداخلة {n}. المرة القادمة: الشرح والوجه للصف." |
+| reading | headDown ≥ 50% of a turn AND handsTogetherInFront ≥ 40% | "You read from your notes for most of turn {n}. Next time: glance at them, look up, then talk to the class." | "قرأت من الورقة معظم المداخلة {n}. المرة القادمة: نظرة سريعة للورقة، ثم الكلام للصف." |
+| looking down | headDown ≥ 50% of a turn (hands free) | "You looked down for most of turn {n}. Next time: look up at your class." | "كان نظرك للأسفل معظم المداخلة {n}. المرة القادمة: النظر للصف." |
+| pockets | handsHidden ≥ 50% of all talking time | "Your hands were in your pockets or out of sight for most of the lesson. Next time: keep them free to show the idea." | "كانت يداك في جيوبك أو بعيدة عن النظر معظم الحصة. المرة القادمة: اليدان حرّتان لتوضيح الفكرة." |
+| crossed | armsCrossed ≥ 30% of a turn | "Your arms were crossed in turn {n}. Open arms look more welcoming." | "كانت ذراعاك متشابكتين على صدرك في المداخلة {n}. الذراعان المفتوحتان أكثر ترحيباً." |
+| still | gesturing < 5% of all talking time (at least 30 s of talking) | "Your hands barely moved. Next time: show the idea with them, like cutting the air into 2 and then 3 pieces." | "لم تتحرك يداك تقريباً. المرة القادمة: توضيح الفكرة باليدين، مثل تقسيم الهواء إلى قطعتين ثم ثلاث." |
+| nonstop | gesturing ≥ 80% of all talking time | "Your hands moved almost the whole time. Next time: pause them on the key point." | "كانت يداك تتحركان طوال الوقت تقريباً. المرة القادمة: توقّف اليدين عند الفكرة الأهم." |
+| face | 5 or more face touches | "You touched your face {k} times. It can pull attention away from the idea." | "لمست وجهك {k} مرات، وهذا قد يشتّت الانتباه عن الفكرة." |
+
+   - **At most 3 notes,** in this priority order: asking, back, reading, looking down, pockets, crossed, still, nonstop, face.
+   - **One strength, when true.** For example: "You faced the class while asking in turn {n}." / "كان وجهك للصف وأنت تسأل في المداخلة {n}."
+   - **If seenPct is under 60% for most turns,** show this instead: "We couldn't see you for most of the lesson, so there are no body language notes. Next time, step back until your waist is in the frame." / "ما قدرنا نشوفك معظم الحصة، فما في ملاحظات لغة جسد. المرة القادمة: الرجوع لورا لحتى يبين الخصر بالكاميرا."
+   - **The "still" example** (cutting the air into pieces) fits fractions. For other topics, use a neutral one: "show the size or the steps with your hands".
+2. **Review page.** Add a card "ملاحظات لغة الجسد / Body language notes" right after "Your plan vs. your lesson", only for stand-up lessons.
+   - **4 small stats,** in ink, with numbers in `<bdi>`:
+     - "مواجهة الصف / Facing the class {x}%"
+     - "النظر للأسفل / Looking down {x}%"
+     - "اليدان ظاهرتان / Hands in view {x}%"
+     - "حركة اليدين / Hand movement {x}%"
+   - **Then** the strength line, then up to 3 notes. Each note has a turn chip; tapping it shows the teacher's words in that turn.
+   - **Footnote (14px):** "قيست على جهازك من نقاط الجسم، بدون تسجيل فيديو، وما بتدخل بالنتيجة. مستوحاة من أبحاث إيماءات المعلّم ولغة الجسد في التدريس المصغّر. / Measured on your device from body landmarks, with no video recorded, and not part of your score. Informed by research on teacher gestures and nonverbal cues in microteaching."
+   - **Hide this card in the shared view.** It's personal.
+
+## PART E — Tuning and tests
+
+1. **A hidden page, `/dev/body`.** It shows:
+   - the camera with the landmarks drawn (thin ink/white lines);
+   - the live features and which rules are firing;
+   - sliders for every threshold in `bodyRules.ts`, with a "Copy thresholds" button.
+
+   We'll use it to tune, and to record footage.
+2. **`pnpm test:body`.** Run `shared/bodyNotes.ts` and `features.ts` on synthetic landmark sequences (no camera). Print PASS or FAIL per case, and exit 1 on any failure.
+
+   | Synthetic case | Expected |
+   |---|---|
+   | Arms crossed | crossed |
+   | Wrists at the hips, hips visible | pockets |
+   | Shoulders visible but no face | back |
+   | Head down with hands together in front | reading (not "looking down") |
+   | A question turn whose last 3 s are head-down | asking |
+   | Constant fast wrists | nonstop |
+   | Person out of frame | the "couldn't see you" line |
+   | A normal teacher | no notes |
+
+3. **Check:**
+   - normal mode and stage mode behave exactly as before;
+   - test:judge, test:plan and test:body all pass;
+   - the camera never starts unless stand-up mode is on;
+   - turning stand-up mode off stops the camera (the camera light goes off).
+4. **Docs.**
+   - Add a short "Stand-up mode and body language notes" section to docs/SPEC.md.
+   - Add rule 16 to replit.md: "Stand-up mode: the camera stays on the device, nothing is recorded, body language notes are never scored, and normal mode stays unchanged."

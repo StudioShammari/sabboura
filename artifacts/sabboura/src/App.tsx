@@ -10,6 +10,7 @@ const DevStates = lazy(() => import('@/pages/DevStates'));
 const DevTest = lazy(() => import('@/pages/DevTest'));
 const Pitch = lazy(() => import('@/pages/Pitch'));
 const Replay = lazy(() => import('@/pages/Replay'));
+const DevBody = lazy(() => import('@/pages/DevBody'));
 
 export default function App() {
   return (
@@ -22,6 +23,7 @@ export default function App() {
           <Route path="/lesson/:id">{(p) => <Classroom key={p.id} />}</Route>
           <Route path="/dev/states" component={DevStates} />
           <Route path="/dev/test" component={DevTest} />
+          <Route path="/dev/body" component={DevBody} />
           <Route path="/pitch" component={Pitch} />
           <Route path="/replay/:id" component={Replay} />
           <Route><Home /></Route>

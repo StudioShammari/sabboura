@@ -9,7 +9,9 @@ import { StateBall } from '@/components/StateBall';
 import { badgeLabel } from '@shared/data';
 import { fmtNum, mmss, moveLabel, tr, trf, useT } from '@/i18n';
 import { SettingProvider, setClassSetting } from '@/lib/classSetting';
-import { createLesson, getPlanCheck, getReplay, getScore, type PlanCheckResp, type Replay } from '@/lib/api';
+import { createLesson, getBody, getPlanCheck, getReplay, getScore, type PlanCheckResp, type Replay } from '@/lib/api';
+import type { BodyResult } from '@shared/bodyNotes';
+import { BodyNotes } from '@/components/BodyNotes';
 import { PlanVsLesson } from '@/components/PlanVsLesson';
 import { Stepper } from '@/components/Stepper';
 import { openMic, unlockAudio } from '@/lib/audio';
@@ -98,11 +100,14 @@ export default function Review() {
   const [phone, setPhone] = useState(matchMedia('(max-width: 767px)').matches);
   const belled = useRef(false);
   const [pc, setPc] = useState<PlanCheckResp | null>(null);
+  const [body, setBody] = useState<{ standup: boolean; result: BodyResult | null } | null>(null);
 
   useEffect(() => {
     getScore(id).then((s) => { setScore(s); setSettings({ lang: s.language, title: s.teacher_title, topicId: s.topic_id }); }).catch(() => setMissing(true));
     getReplay(id).then(setReplay).catch(() => {});
   }, [id]);
+  // body language notes: personal, so never fetched for the shared view
+  useEffect(() => { if (!shared) getBody(id).then(setBody).catch(() => {}); }, [id, shared]);
   // the plan checklist: code rows arrive at once, AI rows later
   useEffect(() => {
     if (shared) return;
@@ -153,6 +158,8 @@ export default function Review() {
     for (const k of REVEAL_ORDER) { setFlipped((s) => new Set(s).add(k)); sfx.flip(); await sleep(150); }
   };
   const again = async (keepPlan: boolean) => {
+    // a stand-up lesson goes back through the Plan page, where the camera is set up again
+    if (keepPlan && body?.standup) { setClassSetting(setting); nav(`/plan/${pc?.packId ?? `lib-${score.topic_id}`}?from=${id}`); return; }
     await unlockAudio();
     try { await openMic(); } catch { /* typing is still possible */ }
     const withPlan = keepPlan && pc?.packId && pc.plan ? { packId: pc.packId, plan: pc.plan } : { topicId: score.topic_id };
@@ -232,6 +239,7 @@ export default function Review() {
         )}
         {!shared && pc?.plan && <PlanVsLesson lang={L} plan={pc.plan} check={pc.check} levels={fl} />}
       </div>
+      {!shared && body?.standup && body.result && <BodyNotes lang={L} result={body.result} />}
 
       <section className="panel score-grid">
         <div style={{ textAlign: 'center' }}>

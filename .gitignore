@@ -5,3 +5,6 @@ dist
 artifacts/sabboura/scripts/out
 *.log
 /artifacts/sabboura/generated-artifacts/
+
+# Stand-up mode: MediaPipe wasm is copied from node_modules at dev/build time
+/artifacts/sabboura/public/mediapipe/wasm/

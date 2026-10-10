@@ -64,5 +64,5 @@ export async function scoreWithAI(args: { score: ScoreJson; turns: TurnRec[]; se
     }
   }
   console.warn('[scorer] falling back to feedback.json:', String((last as any)?.message ?? last));
-  return fallbackFeedback(score, score.language);
+  return fallbackFeedback(score, score.language, setting);
 }

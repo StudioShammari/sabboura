@@ -18,6 +18,8 @@ export const lessons = pgTable('lessons', {
   planCheckJson: jsonb('plan_check_json'),
   /** The class conditions (nullable: older lessons and the default setting). */
   settingJson: jsonb('setting_json'),
+  /** Stand-up mode (nullable: older lessons and normal mode). */
+  standup: boolean('standup'),
 });
 
 export const turns = pgTable(
@@ -86,3 +88,14 @@ export const packs = pgTable('packs', {
   packJson: jsonb('pack_json'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });
+
+/** Stand-up mode: per-turn body numbers only (never video or images). Body language notes are never scored. */
+export const bodyTurns = pgTable(
+  'body_turns',
+  {
+    lessonId: uuid('lesson_id').notNull().references(() => lessons.id, { onDelete: 'cascade' }),
+    turnNo: integer('turn_no').notNull(),
+    metrics: jsonb('metrics').notNull(),
+  },
+  (t) => [unique('body_turns_lesson_turn').on(t.lessonId, t.turnNo)],
+);

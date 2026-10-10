@@ -14,6 +14,12 @@ import { lastPackInput, makePack } from '@/lib/packs';
 import { loadManifest, openMic, getMic, preloadLesson, unlockAudio } from '@/lib/audio';
 import { deviceId, getSettings, lsGet, lsSet, setSettings, useSettings } from '@/lib/store';
 import { playChorus } from '@/lib/turnPlayer';
+import { CameraSetup } from '@/components/CameraSetup';
+import { getCalib, getCamera, setCalib, stopCamera, useCamera } from '@/lib/body/detector';
+import { getStandup, setStandup, useStandup } from '@/lib/body/standup';
+import { Check } from 'lucide-react';
+
+const getStandupOn = () => getStandup().on;
 
 const storeKey = (packId: string, lang: string) => `sabboura.plan.v1.${packId}.${lang}`;
 /** A plan with the kid names of one class swapped for another's. */
@@ -43,6 +49,16 @@ export default function Plan() {
   const stored = useStoredSetting();
   const setting = demo ? DEFAULT_SETTING : stored;
   const [panel, setPanel] = useState(false);
+
+  // stand-up mode (off by default; never in stage mode). The camera opens only with the setup window.
+  const sp = useStandup();
+  const standupOn = !demo && sp.on;
+  const cam = useCamera();
+  const [camOpen, setCamOpen] = useState(false);
+  const handoff = useRef(false);
+  useEffect(() => () => { if (!handoff.current) stopCamera(); }, []);
+  const standupOff = () => { setStandup({ on: false }); stopCamera(); setCalib(null); setCamOpen(false); };
+  const camReady = cam.status === 'on' && !!getCalib();
 
   const isLib = packId.startsWith('lib-');
   // an uploaded lesson: the pack (from the server) decides the topic, plan defaults and language
@@ -134,7 +150,10 @@ export default function Plan() {
       }
       const st = getSettings();
       void preloadLesson(topicId, st.lang, st.title);
-      const r = await createLesson({ packId, language: isLib ? st.lang : pack?.language ?? st.lang, teacherTitle: st.title, deviceId: deviceId(), plan, previousLessonId: from ?? undefined, ...(demo ? {} : { setting }) });
+      const standup = !demo && withMic && getStandupOn() && getCamera().status === 'on' && !!getCalib();
+      if (!standup) stopCamera();
+      const r = await createLesson({ packId, language: isLib ? st.lang : pack?.language ?? st.lang, teacherTitle: st.title, deviceId: deviceId(), plan, previousLessonId: from ?? undefined, ...(demo ? {} : { setting }), ...(standup ? { standup: true } : {}) });
+      handoff.current = standup;
       nav(`/lesson/${r.lessonId}${demo ? '?demo=1' : withMic ? '' : '?type=1'}`);
     } catch {
       setFailed(true); setBusy(false);
@@ -143,6 +162,8 @@ export default function Plan() {
 
   const start = useCallback(async () => {
     if (busy) return;
+    // stand-up mode on but not set up yet: set up the camera first
+    if (!demo && getStandupOn() && !(getCamera().status === 'on' && getCalib())) { setCamOpen(true); return; }
     await unlockAudio();
     if (!getMic()) {
       try {
@@ -256,10 +277,26 @@ export default function Plan() {
       <section className="plan-bottom">
         <SettingProvider value={setting}>
           <div className="class-strip">
+            <div className="class-strip-head">
             <h2>
               <span>{tr('classToday', lang)}: <bdi className="class-label">{settingLabel(setting, lang)}</bdi></span>
               {!demo && <button type="button" className="text-link" aria-expanded={panel} onClick={() => setPanel((o) => !o)}>{tr('classChange', lang)}</button>}
             </h2>
+            {!demo && (
+              <div className="standup-row">
+                <label className="tap-switch">
+                  <input type="checkbox" role="switch" checked={sp.on} onChange={(e) => { if (e.target.checked) { setStandup({ on: true }); setCamOpen(true); } else standupOff(); }} />
+                  <b>{tr('standup', lang)}</b>
+                </label>
+                {standupOn ? (
+                  <span className="standup-status">
+                    {camReady && <span className="ready"><Check size={16} strokeWidth={3} aria-hidden />{tr('standupReady', lang)}</span>}
+                    <button type="button" className="text-link" onClick={() => setCamOpen(true)}>{tr('camSetupTitle', lang)}</button>
+                  </span>
+                ) : <span className="sw-hint">{tr('standupLine', lang)}</span>}
+              </div>
+            )}
+            </div>
             {panel && !demo && <ClassPanel setting={setting} lang={lang} onClose={() => setPanel(false)} isAr={isLib ? s.lang === 'ar' : pack?.language === 'ar'} />}
             <ul>
               {KID_IDS.map((k: KidId) => (
@@ -287,6 +324,7 @@ export default function Plan() {
           </div>
         </div>
       )}
+      {camOpen && standupOn && <CameraSetup lang={lang} onDone={() => setCamOpen(false)} onOff={standupOff} />}
       {demo && showStage && <StageReady lang={lang} result={stageRes} onStart={() => void runStage()} onContinue={() => setShowStage(false)} />}
     </main>
   );

@@ -1,2 +1,3 @@
 - [Sabboura project facts](sabboura-project.md) — spec, architecture, hard rules, env/AI-key state, uploaded-lesson (pack) design
+- [Stand-up mode decisions](standup-mode.md) — body notes, calibration flow, headless fake camera, accepted limits
 - [Tooling quirks](tooling-quirks.md) — drizzle-kit flags, no pnpm root, PORT env, no api artifact type
