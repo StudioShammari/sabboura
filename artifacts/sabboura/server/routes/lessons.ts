@@ -42,7 +42,7 @@ lessonsRouter.post('/lessons', async (req, res) => {
   const levels = startLevels(topicId);
   putState({
     id: l.id, topicId, language: b.language, title: b.teacherTitle, attemptNo, levels, turnNo: 0, last3: [],
-    busy: false, startersUsed: new Set(), linaAsked: false, lastTranscript: '', pendingQuestion: null, askedQuestions: [], kidSaid: [], startedAt: Date.now(),
+    busy: false, startersUsed: new Set(), linaAsked: false, lastTranscript: '', pendingQuestion: null, askedQuestions: [], taught: false, kidSaid: [], startedAt: Date.now(),
   });
   res.status(201).json({ lessonId: l.id, turnNo: 0, levels });
 });

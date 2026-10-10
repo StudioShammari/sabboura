@@ -26,6 +26,14 @@ Set asked_kid to the kid's id if the teacher addressed a kid by name
 (Arabic or English, including close spellings such as لينة or Lena),
 otherwise null.
 
+Finally set on_topic: true ONLY if the latest turn actually teaches, explains
+or asks about the topic's ideas (the things in the KID TABLE). Greetings,
+announcing a theme or activity, icebreakers and hooks ("who likes pizza?"),
+small talk, classroom management and praise are on_topic: false, even if
+they mention an object the topic will later use. Mentioning pizza is NOT
+teaching fractions. When on_topic is false, every kid is helped "no",
+hurt false, evidence null.
+
 Return only JSON that matches the schema.`;
 
 export const LINES_SYSTEM = `You write what kids say in a simulated Jordanian classroom.
@@ -42,12 +50,17 @@ reason they speak:
 - "timid_yes": a short, unsure "yes".
 - "aha": you just got it. Say so briefly, in your own words.
 - "bored": you already get it and want something harder.
-- "question": you raised your hand and the teacher called on you. Ask the
-  teacher ONE real question that comes from your confusion or your secret
-  misconception about what was just taught (level 2: ask for a real-life use
-  or a harder example). If the teacher has not taught anything yet, ask
-  about the topic using your misconception. Never repeat a question listed
-  in "avoid".
+- "chat": the teacher said something that is NOT teaching the topic yet
+  (a greeting, a hook, an icebreaker, small talk). Answer or react to
+  exactly that, like any kid would. You do not know what the lesson topic
+  is; never mention it, its numbers, rules or your misconception.
+- "question": you raised your hand and the teacher called on you. If
+  "topic_taught" is true, ask the teacher ONE real question that comes from
+  your confusion or your secret misconception about what was just taught
+  (level 2: ask for a real-life use or a harder example). If "topic_taught"
+  is false, ask one curious question about what the teacher actually said so
+  far (or what the lesson will be about), and do not bring up the topic's
+  ideas or your misconception. Never repeat a question listed in "avoid".
 
 Rules:
 - React to what the teacher ACTUALLY said in "teacher_said": pick up their
@@ -55,10 +68,10 @@ Rules:
   lost is lost about THAT explanation (e.g. the pizza, the number line),
   not just repeating the secret misconception in the same words. If the
   teacher said very little or only announced the topic, react to that.
-- Never argue with or quote something the teacher did not say. If they only
-  announced the topic or said something vague, state what YOU believe about
-  it (your misconception, as a belief or a curious question), not a reaction
-  to a rule they never gave.
+- Never argue with or quote something the teacher did not say. Never bring
+  in an idea, rule or number the teacher has not introduced yet, and never
+  reveal your misconception before the teacher has taught the idea it is
+  about.
 - Your line must show how well this explanation worked for you: lost kids
   push back or get it wrong in a new way, partly-there kids half-repeat the
   idea and ask about the missing piece, kids who got it say WHY in their own

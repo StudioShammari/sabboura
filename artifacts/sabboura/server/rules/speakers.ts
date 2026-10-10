@@ -10,11 +10,23 @@ export interface ChooseInput {
   changes: Record<KidId, KidChange>;
   check: CheckType;
   askedKid: KidId | null;
+  /** False when the teacher is only chatting (greeting, hook, small talk). */
+  onTopic?: boolean;
+  rand?: () => number;
 }
 
 /** B4.2: pure function. Decide after new levels are set. At most 2 speakers. */
 export function chooseSpeakers(i: ChooseInput): { chorus: boolean; speakers: Speaker[] } {
   const { levels, changes, check, askedKid } = i;
+  if (i.onTopic === false) {
+    // Chat: kids just react to what was said. No chorus, no misconceptions.
+    const rand = i.rand ?? Math.random;
+    const pool = (['omar', 'sara', 'khaled', 'lina', 'yazan'] as KidId[]).filter((k) => k !== askedKid);
+    const pick = pool.sort(() => rand() - 0.5);
+    const want = check === 'question' ? 2 : 1;
+    const list: KidId[] = askedKid ? [askedKid, ...pick] : pick;
+    return { chorus: false, speakers: list.slice(0, want).map((kid) => ({ kid, reason: 'chat' as const })) };
+  }
   if (check === 'yes_no' && !askedKid) return { chorus: true, speakers: [] };
 
   const reached2 = (k: KidId) => changes[k].to === 2 && changes[k].from < 2;

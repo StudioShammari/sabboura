@@ -25,3 +25,7 @@ description: Where the spec lives, architecture choices, AI-key state, shared te
 ## Kid lines are generated, not scripted
 - The fixed starter objections (and their pre-recorded clips) are now only the fallback when the lines call fails. Every kid reply is generated from the teacher's actual words, earlier teacher turns and the kids' recent lines.
 **Why:** the user said the kids sounded memorized and gave the same answer regardless of what the teacher said. This overrides the spec's fixed-starter behaviour. The cost is live TTS latency on turn 1 instead of an instant pre-recorded clip.
+
+## Chat vs teaching turns
+- The judge returns `on_topic`. Greetings, hooks ("who likes pizza?") and small talk are off-topic: no level changes, kids speak with reason `chat`, and the lines model gets no topic or misconception for them. Before the first on-topic turn (`taught` false) a called-on kid asks only a curious question about what was said.
+**Why:** kids were answering "who likes pizza?" with fraction questions because the topic and misconceptions were always in the prompt, and the prompt said to use the misconception even if nothing was taught.

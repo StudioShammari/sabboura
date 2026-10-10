@@ -19,6 +19,8 @@ export interface LessonState {
   /** A kid's raised-hand question the teacher has not answered yet. */
   pendingQuestion: { kid: KidId; text: string } | null;
   askedQuestions: string[];
+  /** True once the teacher has taught (not just chatted about) the topic. */
+  taught: boolean;
   /** Recent lines the kids said, so new lines do not repeat them. */
   kidSaid: { kid: KidId; text: string }[];
 }
@@ -53,6 +55,7 @@ export async function getState(id: string): Promise<LessonState | null> {
     startedAt: l.createdAt.getTime(),
     pendingQuestion: null,
     askedQuestions: [],
+    taught: ts.some((t) => (t.judgeJson as { on_topic?: boolean } | null)?.on_topic === true),
     kidSaid: lines.slice().sort((a, b) => a.turnNo - b.turnNo || a.idx - b.idx).slice(-8).map((x) => ({ kid: x.kidId as KidId, text: x.text })),
   };
   mem.set(id, s);

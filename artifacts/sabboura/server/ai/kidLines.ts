@@ -25,12 +25,14 @@ export function failsafeLine(kid: KidId, lang: Lang) {
 }
 
 /** Canned line for a kid + reason (B3.7). Always returns something. */
-export function cannedLine(topicId: string, kid: KidId, reason: SpeakReason, lang: Lang, title: Title) {
+export function cannedLine(topicId: string, kid: KidId, reason: SpeakReason, lang: Lang, title: Title, taught = true) {
   let l: Line | undefined;
   if (reason === 'objection') l = canned.starters[topicId]?.[kid];
   else if (reason === 'answer') l = kid === 'lina' ? canned.answer_lost[topicId]?.lina : canned.starters[topicId]?.[kid];
   else if (reason === 'aha') l = kid === 'lina' ? canned.reasons.aha_lina : canned.reasons.aha;
   else if (reason === 'bored') l = canned.reasons.bored;
+  else if (reason === 'chat') l = canned.reasons.timid_yes;
+  else if (reason === 'question' && taught === false) l = canned.reasons.timid_yes;
   else if (reason === 'question') l = canned.starters[topicId]?.[kid] ?? canned.reasons.bored;
   else l = canned.reasons.timid_yes;
   return l ? fromCanned(l, lang, title) : failsafeLine(kid, lang);
@@ -46,6 +48,8 @@ export async function generateLines(args: {
   speakers: Speaker[];
   levels: Levels;
   avoid?: string[];
+  /** Has the teacher taught the topic yet? Kids must not know the topic before that. */
+  taught?: boolean;
   /** Earlier teacher turns and what the kids already said. */
   context?: { teacher: string[]; kids: { kid: KidId; text: string }[] };
   signal?: AbortSignal;
@@ -56,15 +60,16 @@ export async function generateLines(args: {
     language: args.lang === 'ar' ? 'Arabic' : 'English',
     teacher_address: addressTerm(args.lang, args.title),
     teacher_said: args.transcript,
+    topic_taught: args.taught ?? true,
     ...(args.context?.teacher.length ? { earlier_teacher_turns: args.context.teacher } : {}),
     ...(args.context?.kids.length ? { kids_already_said: args.context.kids.map((k) => `${kidById(k.kid).name.en}: ${k.text}`) } : {}),
     ...(args.avoid?.length ? { avoid: args.avoid } : {}),
     speakers: args.speakers.map((s) => {
       const d = kidById(s.kid);
-      return {
-        id: s.kid, name: d.name.en, gender: d.gender === 'f' ? 'girl' : 'boy', personality: d.personality,
-        misconception: topic.kids[s.kid].misconception, level: args.levels[s.kid], reason: s.reason,
-      };
+      const base = { id: s.kid, name: d.name.en, gender: d.gender === 'f' ? 'girl' : 'boy', personality: d.personality, reason: s.reason };
+      // Before the topic is taught (or while chatting) a kid has no misconception to voice.
+      if (s.reason === 'chat' || (s.reason === 'question' && !args.taught)) return base;
+      return { ...base, misconception: topic.kids[s.kid].misconception, level: args.levels[s.kid] };
     }),
   });
   let lastErr = '';
@@ -81,7 +86,7 @@ export async function generateLines(args: {
         const g = got[i];
         const ok = g && g.kid === s.kid;
         const text = ok ? truncateWords(stripEmojiAndQuotes(g.text), 15) : '';
-        if (!ok || !text) return { kid: s.kid, reason: s.reason, ...cannedLine(args.topicId, s.kid, s.reason, args.lang, args.title), source: 'canned' as const };
+        if (!ok || !text) return { kid: s.kid, reason: s.reason, ...cannedLine(args.topicId, s.kid, s.reason, args.lang, args.title, args.taught), source: 'canned' as const };
         const say = truncateWords(stripEmojiAndQuotes(g.say || g.text), 15) || text;
         const text_en = args.lang === 'en' ? text : stripEmojiAndQuotes(g.text_en || '') || text;
         return { kid: s.kid, reason: s.reason, text, say, text_en, source: 'ai' as const };
@@ -93,7 +98,7 @@ export async function generateLines(args: {
     }
   }
   return {
-    lines: args.speakers.map((s) => ({ kid: s.kid, reason: s.reason, ...cannedLine(args.topicId, s.kid, s.reason, args.lang, args.title), source: 'canned' as const })),
+    lines: args.speakers.map((s) => ({ kid: s.kid, reason: s.reason, ...cannedLine(args.topicId, s.kid, s.reason, args.lang, args.title, args.taught), source: 'canned' as const })),
     model: null, ms: since(t0), ok: false, error: lastErr,
   };
 }

@@ -12,6 +12,7 @@ export const JudgeOut = z.object({
   kids: z.object({ omar: Verdict, lina: Verdict, sara: Verdict, khaled: Verdict, yazan: Verdict }),
   check: z.enum(['none', 'yes_no', 'question']),
   asked_kid: KidIdSchema.nullable(),
+  on_topic: z.boolean().default(true),
 });
 export type JudgeOutT = z.infer<typeof JudgeOut>;
 
@@ -53,8 +54,9 @@ export const JUDGE_JSON_SCHEMA = {
     },
     check: { type: 'string', enum: ['none', 'yes_no', 'question'] },
     asked_kid: { anyOf: [{ type: 'string', enum: ['omar', 'lina', 'sara', 'khaled', 'yazan'] }, { type: 'null' }] },
+    on_topic: { type: 'boolean' },
   },
-  required: ['kids', 'check', 'asked_kid'],
+  required: ['kids', 'check', 'asked_kid', 'on_topic'],
   additionalProperties: false,
 } as const;
 export const LINES_JSON_SCHEMA = {
@@ -94,7 +96,7 @@ export const SCORER_JSON_SCHEMA = {
 // ---- shared turn types ----
 export type CheckType = 'none' | 'yes_no' | 'question';
 export type Helped = 'no' | 'partly' | 'fully';
-export type SpeakReason = 'objection' | 'answer' | 'timid_yes' | 'aha' | 'bored' | 'question';
+export type SpeakReason = 'objection' | 'answer' | 'timid_yes' | 'aha' | 'bored' | 'question' | 'chat';
 
 export interface KidChange {
   from: Level;

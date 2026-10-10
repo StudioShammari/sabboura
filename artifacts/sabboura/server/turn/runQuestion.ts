@@ -17,9 +17,9 @@ export async function* runQuestion(state: LessonState, kid: KidId, signal?: Abor
     const g = await generateLines({
       topicId: state.topicId, lang: state.language, title: state.title, transcript: said, signal,
       speakers: [{ kid, reason: 'question' }], levels: state.levels, avoid: state.askedQuestions.slice(-6),
-      context: { teacher: [], kids: state.kidSaid },
+      context: { teacher: [], kids: state.kidSaid }, taught: state.taught,
     });
-    const l = g.lines[0] ?? { kid, reason: 'question' as const, ...cannedLine(state.topicId, kid, 'question', state.language, state.title), source: 'canned' as const };
+    const l = g.lines[0] ?? { kid, reason: 'question' as const, ...cannedLine(state.topicId, kid, 'question', state.language, state.title, state.taught), source: 'canned' as const };
     if (!g.ok) yield { event: 'failsafe', data: { stage: 'lines', reason: g.error ?? 'lines failed', turnNo, kid } };
     state.pendingQuestion = { kid, text: l.text };
     state.askedQuestions.push(l.text);

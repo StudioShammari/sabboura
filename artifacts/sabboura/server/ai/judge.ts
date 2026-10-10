@@ -39,6 +39,9 @@ export async function judgeTurn(args: {
         maxTokens: 4000, timeoutMs, signal: args.signal,
       });
       const out = r.value;
+      if (!out.on_topic) {
+        for (const k of KID_IDS) out.kids[k] = { evidence: null, helped: 'no', hurt: false };
+      }
       const mism: KidId[] = [];
       for (const k of KID_IDS) {
         const v = out.kids[k];

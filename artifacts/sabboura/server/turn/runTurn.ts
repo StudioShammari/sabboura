@@ -54,7 +54,8 @@ export async function* runTurn(ctx: TurnCtx): AsyncGenerator<TurnEvent> {
     let speakers: Speaker[] = [];
     let failsafeStage: string | null = null;
     if (j.ok) {
-      ({ chorus, speakers } = chooseSpeakers({ levels, changes, check, askedKid }));
+      ({ chorus, speakers } = chooseSpeakers({ levels, changes, check, askedKid, onTopic: j.out!.on_topic }));
+      if (j.out!.on_topic) state.taught = true;
     } else {
       failsafeStage = 'judge';
       const kid = (['omar', 'sara', 'khaled', 'yazan'] as KidId[]).find((k) => levels[k] === 0);
@@ -143,6 +144,7 @@ export async function* runTurn(ctx: TurnCtx): AsyncGenerator<TurnEvent> {
         topicId: state.topicId, lang: state.language, title: state.title,
         transcript: state.pendingQuestion ? `(answering ${kidById(state.pendingQuestion.kid).name.en}'s question "${state.pendingQuestion.text}") ${transcript}` : transcript,
         context: { teacher: state.last3.map((t) => t.transcript), kids: state.kidSaid },
+        taught: state.taught,
         signal: ctx.signal,
         speakers: needAI.map((x) => x.s), levels,
       });
