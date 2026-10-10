@@ -608,7 +608,7 @@ This page is calm and adult. **The class and the فاهمين؟ panel come first
   - Tapping a column shows the teacher's words and the kids' lines. On phones it scrolls sideways inside its own card.
 - **G. Buttons and footer:**
   - Buttons: "أعد الدرس مع نفس الصف / Teach it again" (primary; new lesson, same settings), "شارك / Share", "كيف نحسب النتيجة / How scoring works" (a modal with B4.6).
-  - Privacy line: "هذه المراجعة لك وحدك. المدرسة بتشوف أرقام مجمّعة بس. / This review is yours. A school only sees totals."
+  - Privacy line: "هذه المراجعة إلك. ما حدا بشوفها إلا إذا شاركت الرابط. / This review is yours. Nobody sees it unless you share the link."
   - Shared view (opened from a link): hide "Teach it again" and show "ابدأ درساً تدريبياً / Try a practice lesson".
 - **Motion:** the bell on arrival, the ring counting up, the bars filling. **No confetti on this page, ever.**
 - **Fast first paint:** show the code-computed numbers immediately, and fade in the AI parts (clarity, why it worked, tip, line) when they arrive.
