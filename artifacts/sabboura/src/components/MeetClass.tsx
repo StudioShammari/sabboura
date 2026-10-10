@@ -6,8 +6,8 @@ import { tr } from '@/i18n';
 
 export type StageResult = Record<'mic' | 'audio' | 'ai' | 'full' | 'wake', boolean | null>;
 
-export function MeetClass({ lang, topicId, levels, micErr, onStart, onType, stageCheck, stageResult }: {
-  lang: Lang; title: Title; topicId: string; levels: Levels; micErr: string | null; onStart: () => void; onType: () => void; stageCheck: boolean; stageResult: StageResult | null;
+export function MeetClass({ lang, topicId, levels, micErr, onStart, onType, onContinue, stageCheck, stageResult }: {
+  lang: Lang; title: Title; topicId: string; levels: Levels; micErr: string | null; onStart: () => void; onType: () => void; onContinue: () => void; stageCheck: boolean; stageResult: StageResult | null;
 }) {
   const topic = topicById(topicId);
   if (stageCheck) {
@@ -16,9 +16,14 @@ export function MeetClass({ lang, topicId, levels, micErr, onStart, onType, stag
       <div className="stage-ready" role="dialog" aria-modal="true">
         {!stageResult && <button className="btn btn-primary" style={{ fontSize: '2rem', padding: '18px 48px' }} onClick={onStart}>{tr('stageReady', lang)}</button>}
         {stageResult && (
-          <ul className="checklist">
-            {rows.map(([k, label]) => <li key={k}>{stageResult[k] === null ? '…' : stageResult[k] ? '✓' : '✗'} {tr(label, lang)}</li>)}
-          </ul>
+          <div>
+            <ul className="checklist">
+              {rows.map(([k, label]) => <li key={k}>{stageResult[k] === null ? '…' : stageResult[k] ? '✓' : '✗'} {tr(label, lang)}</li>)}
+            </ul>
+            {rows.every(([k]) => stageResult[k] !== null) && rows.some(([k]) => stageResult[k] === false) && (
+              <button className="btn btn-primary" style={{ marginTop: 24 }} onClick={onContinue}>{tr('letsStart', lang)}</button>
+            )}
+          </div>
         )}
       </div>
     );

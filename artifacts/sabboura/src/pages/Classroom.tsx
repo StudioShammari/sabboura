@@ -11,7 +11,7 @@ import { MicButton } from '@/components/MicButton';
 import { DebugPanel } from '@/components/DebugPanel';
 import { fmtNum, useT, tr } from '@/i18n';
 import { createLesson, endLesson, getLesson, redoTurn, transcribe, warmup } from '@/lib/api';
-import { closeMic, fadeOutAll, getCtx, getMic, micName, openMic, preloadLesson, unlockAudio } from '@/lib/audio';
+import { closeMic, fadeOutAll, getMic, micName, openMic, preloadLesson, unlockAudio } from '@/lib/audio';
 import { Recorder } from '@/lib/recorder';
 import { sfx } from '@/lib/sfx';
 import { deviceId, getSettings, setSettings, useSettings } from '@/lib/store';
@@ -407,14 +407,6 @@ export default function Classroom() {
     return () => { clearTimeout(t); window.removeEventListener('mousemove', f); };
   }, [stage]);
 
-  // meet-the-class splash: about 3 s when audio is already unlocked from the home page
-  useEffect(() => {
-    if (!meet || demo || !ready) return;
-    if (getCtx().state !== 'running') return;
-    const t = setTimeout(() => setMeet(false), 3000);
-    return () => clearTimeout(t);
-  }, [meet, demo, ready]);
-
   useEffect(() => () => {
     genRef.current++; abortRef.current(); fadeOutAll(50); recRef.current?.dispose(); if (!keepMic.current) closeMic(); wake.current?.release().catch(() => {});
     if (recTimer.current) clearInterval(recTimer.current);
@@ -453,7 +445,7 @@ export default function Classroom() {
       void preloadLesson(settings.topicId, settings.lang, settings.title);
       upd('mic', await requestMic());
       try { const w = await warmup(); upd('ai', !!w.ok); } catch { upd('ai', false); }
-      setTimeout(() => setMeet(false), 1800);
+      if (Object.values(r).every((v) => v === true)) setTimeout(() => setMeet(false), 4000);
       return;
     }
     await unlockAudio();
@@ -590,7 +582,7 @@ export default function Classroom() {
         </div>
       )}
 
-      {meet && <MeetClass lang={lang} title={settings.title} topicId={settings.topicId} levels={levels} micErr={micErr} onStart={begin} onType={() => { setMeet(false); setTyping(true); void unlockAudio(); }} stageCheck={demo} stageResult={stageRes} />}
+      {meet && <MeetClass lang={lang} title={settings.title} topicId={settings.topicId} levels={levels} micErr={micErr} onStart={begin} onType={() => { setMeet(false); setTyping(true); void unlockAudio(); }} stageCheck={demo} stageResult={stageRes} onContinue={() => setMeet(false)} />}
 
       {confirmEnd && (
         <div className="modal-back" onClick={() => setConfirmEnd(false)}>
