@@ -19,5 +19,5 @@ description: Where the spec lives, architecture choices, AI-key state, shared te
 
 ## Interactivity (expressions and raised hands)
 - Kids show faces by state: confused (lost), neutral, happy (got it), eager (hand up); Yazan keeps bored/neutral/happy plus eager. Expression images were made with Replit's built-in image editing from the neutral portraits (allowed by the asset rule).
-- Raised hands: client timer raises a hand when idle (Omar first); teacher clicks the kid to call on them; `POST /lessons/:id/call-on` streams one question line. The question is held in memory (`pendingQuestion`) and fed to the next judge and lines call. Not saved to the DB, so review and replay do not show it.
+- Raised hands: client timer raises one hand about 12-18 s after a teacher turn, never before the first turn and at most every other turn; teacher clicks the kid to call on them; `POST /lessons/:id/call-on` streams one question line. The question is held in memory (`pendingQuestion`) and fed to the next judge and lines call. Not saved to the DB, so review and replay do not show it.
 **Why:** keeps judge, scoring and replay tables unchanged. Spontaneous hands are off in stage mode (`?demo=1`) so the scripted demo timing is not disturbed.

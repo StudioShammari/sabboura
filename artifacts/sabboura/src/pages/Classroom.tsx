@@ -78,7 +78,7 @@ export default function Classroom() {
   const startingRec = useRef(false);
   const keepMic = useRef(false);
   const wake = useRef<WakeLockSentinel | null>(null);
-  const raisedCount = useRef(0);
+  const lastRaisedTurn = useRef(-2);
   const lastRaised = useRef<KidId | null>(null);
 
   const setPhaseBoth = (p: Phase) => { phaseRef.current = p; setPhase(p); };
@@ -249,23 +249,24 @@ export default function Classroom() {
   useEffect(() => {
     if (!ready || meet || demo || phase !== 'idle') return;
     if (anyRaised) {
-      const t = setTimeout(() => patchAll({ raised: false }), 25000);
+      const t = setTimeout(() => patchAll({ raised: false }), 15000);
       return () => clearTimeout(t);
     }
-    if (raisedCount.current >= 8) return;
-    const delay = raisedCount.current === 0 ? 7000 : 10000 + Math.random() * 5000;
+    // Never before the teacher has spoken, and at most one hand every other turn.
+    if (turnNo < 1 || turnNo - lastRaisedTurn.current < 2) return;
     const t = setTimeout(() => {
       const lv = levelsRef.current;
-      let pool = KID_IDS.filter((k) => (k === 'yazan' ? lv.yazan === 0 : lv[k] < 2));
-      if (!pool.length) pool = KID_IDS.filter((k) => k !== 'yazan');
+      const lost = KID_IDS.filter((k) => (k === 'yazan' ? lv.yazan === 0 : lv[k] === 0));
+      const pool = lost.length ? lost : KID_IDS.filter((k) => k !== 'yazan' && lv[k] < 2);
+      if (!pool.length) return;
       const fresh = pool.filter((k) => k !== lastRaised.current);
       const list = fresh.length ? fresh : pool;
-      const kid = raisedCount.current === 0 && list.includes('omar') ? 'omar' : list[Math.floor(Math.random() * list.length)];
+      const kid = list[Math.floor(Math.random() * list.length)];
       lastRaised.current = kid;
-      raisedCount.current++;
+      lastRaisedTurn.current = turnNoRef.current;
       patchView(kid, { raised: true });
       sfx.badgeUp();
-    }, delay);
+    }, 12000 + Math.random() * 6000);
     return () => clearTimeout(t);
   }, [ready, meet, demo, phase, anyRaised, turnNo, patchAll, patchView]);
 
@@ -426,7 +427,7 @@ export default function Classroom() {
     try {
       const r = await redoTurn(id);
       setLv(r.levels); setTurnNo(r.turnNo); turnNoRef.current = r.turnNo;
-      tallyHist.current.length = r.turnNo + 1;
+      tallyHist.current.length = r.turnNo + 1; lastRaisedTurn.current = -2;
       setTally(tallyHist.current[r.turnNo] ?? 0);
       setTranscript(''); setMarks([]); setViews({});
       setNotice(tr('redo', getSettings().lang));
