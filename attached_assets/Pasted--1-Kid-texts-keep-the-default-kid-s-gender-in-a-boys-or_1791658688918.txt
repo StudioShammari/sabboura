@@ -1,0 +1,32 @@
+## 1. Kid texts keep the default kid's gender in a boys' or girls' class
+
+What I saw in a "Public · boys · 42" review:
+- «يوسف، وين بتحطي 1/3 على خط من 0 لـ 1؟» should say «بتحط».
+- «سؤال ليوسف باسمها… تقدر تجاوبه» should say «باسمه… يقدر يجاوبه».
+
+In a girls' class, the reveal for Rahaf, Dana and Jana says «كان…», and the English says "he'd" and "him".
+
+Why: these texts get the names swapped but never the grammar. They are used in:
+- `Review.tsx:204` (`tk.reveal[L]`) and `Review.tsx:206` (`tk.next_check[L]`);
+- `server/plan/checkPlan.ts:73` and `:127`, the "next time" lines in "Your plan vs your lesson";
+- `server/ai/scorer.ts` `fallbackFeedback`, which uses `next_check` as try_saying, and the `lina.tip` and `yazan.tip` texts in `data/feedback.json`;
+- uploaded packs, whose reveal and next_check are written for the default kids' genders.
+
+Fix:
+1. In `data/topics.json`, give every kid's `reveal` and `next_check` (every library topic) both Arabic forms:
+   - Keep `ar` exactly as it is; it is the default kid's gender.
+   - Add `ar_m` and `ar_f`. One of them equals `ar`.
+   - Make the English gender-neutral with they/them, e.g. "Couldn't see where they'd use it… would have reached them".
+2. Do the same for `lina.tip` and `yazan.tip` in `data/feedback.json`. In English: "a short question they can answer", "Give them a harder one".
+3. Add `kidText(kid, text, setting, lang)` in `shared/setting.ts`:
+   - For Arabic, it picks `ar_m` or `ar_f` from `kidIdentity(kid, setting).gender` and falls back to `ar`.
+   - It then swaps names with `swapFromDefault`.
+   - Use it in every place listed above.
+4. Pack builder:
+   - For Arabic packs, also ask for `ar_m` and `ar_f` of reveal and next_check. They are optional in zod and fall back to `ar`.
+   - English stays neutral.
+   - Packs that are already cached keep working through the fallback.
+5. Check:
+   - In a public_boys lesson, the review shows «يوسف، وين بتحط…» and «باسمه».
+   - In a public_girls lesson, the reveal for Rahaf, Dana and Jana is feminine and the English says "they".
+   - The default class shows exactly today's text.

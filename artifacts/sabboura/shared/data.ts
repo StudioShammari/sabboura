@@ -11,6 +11,8 @@ export type Level = 0 | 1 | 2;
 export type Levels = Record<KidId, Level>;
 
 export interface L10n { en: string; ar: string }
+/** Text about one kid. `ar` is the default kid's gender; `ar_m` / `ar_f` are optional gendered forms (see kidText). English stays neutral. */
+export interface L10nKid extends L10n { ar_m?: string; ar_f?: string }
 export interface KidDef {
   id: KidId;
   name: L10n;
@@ -25,8 +27,8 @@ export interface TopicKid {
   misconception: string;
   helped_if: string;
   hurt_if: string;
-  reveal: L10n;
-  next_check: L10n;
+  reveal: L10nKid;
+  next_check: L10nKid;
 }
 export interface TopicDef {
   id: string;

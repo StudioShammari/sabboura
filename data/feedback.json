@@ -22,15 +22,19 @@
   },
   "lina": {
     "tip": {
-      "en": "Ask Lina by name, early, with a short question she can answer.",
-      "ar": "المرة القادمة: سؤال للينا باسمها من بداية الدرس، تقدر تجاوبه بكلمتين."
+      "en": "Ask Lina by name, early, with a short question they can answer.",
+      "ar": "المرة القادمة: سؤال للينا باسمها من بداية الدرس، تقدر تجاوبه بكلمتين.",
+      "ar_m": "المرة القادمة: سؤال للينا باسمه من بداية الدرس، يقدر يجاوبه بكلمتين.",
+      "ar_f": "المرة القادمة: سؤال للينا باسمها من بداية الدرس، تقدر تجاوبه بكلمتين."
     },
     "try_saying": "next_check:lina"
   },
   "yazan": {
     "tip": {
-      "en": "Yazan already understood. Give him a harder one so he stays with you.",
-      "ar": "يزن كان فاهم من الأول. سؤال أصعب بيخلّيه معك."
+      "en": "Yazan already understood. Give them a harder one so they stay with you.",
+      "ar": "يزن كان فاهم من الأول. سؤال أصعب بيخلّيه معك.",
+      "ar_m": "يزن كان فاهم من الأول. سؤال أصعب بيخلّيه معك.",
+      "ar_f": "يزن كانت فاهمة من الأول. سؤال أصعب بيخلّيها معك."
     },
     "try_saying": "next_check:yazan"
   },

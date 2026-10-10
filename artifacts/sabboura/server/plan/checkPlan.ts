@@ -4,7 +4,7 @@ import type { Plan, PlanCheck, PlanKind, PlanRow } from '../../shared/plan';
 import { AIError, claudeJSON } from '../ai/clients';
 import { normalise, overlap, words } from '../lib/arabic';
 import type { TurnRec } from '../rules/score';
-import { DEFAULT_SETTING, kidIdentity, type ClassSetting } from '../../shared/setting';
+import { DEFAULT_SETTING, kidIdentity, kidText, type ClassSetting } from '../../shared/setting';
 
 /** The checklist compares the teacher's own plan with what was said. It never touches the score. */
 
@@ -70,7 +70,7 @@ export function checkPlanCode(inp: PlanInput): PlanCheck {
   const setting = inp.setting ?? DEFAULT_SETTING;
   const topic = topicById(inp.topicId);
   const used: Record<string, Set<number>> = { check: new Set(), include: new Set(), challenge: new Set() };
-  const nc = (k: KidId) => topic.kids[k].next_check[lang];
+  const nc = (k: KidId) => kidText(k, topic.kids[k].next_check, setting, lang);
   const rows: PlanRow[] = plan.steps.map((s, i): PlanRow => {
     const base = { step: i + 1, kind: s.kind, turn: null, evidence: null, next_time: null, source: 'code' as const };
     if (s.kind === 'check') {
@@ -104,6 +104,7 @@ export async function checkPlanAI(inp: PlanInput, check: PlanCheck, lessonId = '
   const pending = check.rows.filter((r) => r.status === 'pending' && AI_KINDS.includes(r.kind));
   if (!pending.length) return { ...check, status: 'done' };
   const topic = topicById(inp.topicId);
+  const setting = inp.setting ?? DEFAULT_SETTING;
   const user = JSON.stringify({
     language: lang === 'ar' ? 'Arabic' : 'English',
     steps: pending.map((r) => ({ step: r.step, kind: r.kind, text: plan.steps[r.step - 1].text })),
@@ -124,7 +125,7 @@ export async function checkPlanAI(inp: PlanInput, check: PlanCheck, lessonId = '
     if (!out) return { ...r, status: 'unknown' };
     const v = out.steps.find((x) => x.step === r.step);
     if (!v) return { ...r, status: 'unknown' };
-    const fallbackNext = r.kind === 'explain' ? topic.kids.sara.next_check[lang] : r.kind === 'example' ? topic.kids.khaled.next_check[lang] : null;
+    const fallbackNext = r.kind === 'explain' ? kidText('sara', topic.kids.sara.next_check, setting, lang) : r.kind === 'example' ? kidText('khaled', topic.kids.khaled.next_check, setting, lang) : null;
     if (v.status === 'not_yet') return { ...r, status: 'not_yet', next_time: v.next_time?.trim() || fallbackNext };
     // the quote must really be in a turn: the stated one first, then the others
     const ev = v.evidence?.trim() ?? '';

@@ -1,6 +1,6 @@
 // Class settings: the CONDITIONS of the room (size, who is in the class, language mix, exam focus).
 // Never the kids' abilities. The default setting must behave exactly like the app did before settings existed.
-import { KID_IDS, type KidId, type L10n, type Lang } from './data';
+import { KID_IDS, type KidId, type L10n, type L10nKid, type Lang } from './data';
 
 export type Preset = 'private_mixed' | 'public_boys' | 'public_girls' | 'custom';
 export type Group = 'mixed' | 'boys' | 'girls';
@@ -138,6 +138,12 @@ export function swapNames(text: string, from: ClassSetting, to: ClassSetting): s
 }
 /** Plan text written for the default class, shown for another one. */
 export const swapFromDefault = (text: string, to: ClassSetting) => swapNames(text, DEFAULT_SETTING, to);
+
+/** Text about one kid, for the kid shown in this class: Arabic uses the form for that kid's gender (ar_m / ar_f, else ar), then the names are swapped. English is gender-neutral. */
+export function kidText(kid: KidId, text: L10nKid, s: ClassSetting, lang: Lang): string {
+  const raw = lang === 'ar' ? (kidIdentity(kid, s).gender === 'f' ? text.ar_f : text.ar_m) ?? text.ar : text.en;
+  return swapFromDefault(raw, s);
+}
 
 // ---------------- Back of the class (large classes; shown, never scored) ----------------
 export interface BackTurn { seconds: number; check: string; askedKid: string | null }

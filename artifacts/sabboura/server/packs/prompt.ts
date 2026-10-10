@@ -9,10 +9,13 @@ export const PACK_SYSTEM = `You prepare a practice lesson for Sabboura, a simula
 - trouble_spots: exactly 3 short quotes of what a confused kid might say, matching omar's, lina's and sara's misconceptions, in kid language, without names.
 - kids, each one FIXED slot: omar = the most common misconception about the main idea (research-known where possible), held confidently; lina = a second, more basic misconception a shy kid would never say out loud, fixed by making the idea concrete (picture, model, diagram, number line, object, everyday meaning); sara = knows the rule or fact from the material but not WHY; khaled = can't see where it's used in real life; yazan = already understands and needs a harder challenge.
   For each kid: misconception, helped_if (what the teacher must SAY to fix it, specific enough to check against a transcript), hurt_if (what makes it worse) — these three in ENGLISH; reveal (lesson language, ≤25 words: what the kid thought, then what would have reached them); next_check (lesson language: one question for next lesson, addressed to the kid; in Arabic use Jordanian dialect and the kid's gender: omar, khaled, yazan are boys; lina, sara are girls).
+  Gender of the kid: the class can be all boys or all girls, so the same kid may be shown as a boy or a girl. In English, write reveal and next_check gender-neutral (they/them, never he/him/she/her). In an Arabic lesson also give reveal_ar_m and reveal_ar_f (the reveal worded for a boy and for a girl) and next_check_ar_m and next_check_ar_f (the question worded for a boy and for a girl); the plain reveal and next_check keep the default gender of that kid. Same meaning in both forms, only the gendered words differ (verbs, adjectives, "you" forms). In an English lesson return an empty string for these four.
   Fixed patterns: sara misconception "Memorised <the rule> with no idea why.", helped_if "Gives the REASON (<the reason>), not only the rule.", hurt_if "Says 'just memorise it' or only repeats the rule."; khaled misconception "Can't see why <the topic> matters in real life.", helped_if "Uses a concrete real-life example (<two examples>).", hurt_if "Says it only matters for the exam."; yazan misconception "Already understands. Gets bored when the basics are repeated.", helped_if "Gives a harder challenge (e.g. <one>) or asks him to explain to the class.", hurt_if "Repeats the basics with nothing new."
 No emojis. Return only JSON that matches the schema.`;
 
-const KID = z.object({ misconception: z.string(), helped_if: z.string(), hurt_if: z.string(), reveal: z.string(), next_check: z.string() });
+const KID = z.object({ misconception: z.string(), helped_if: z.string(), hurt_if: z.string(), reveal: z.string(), next_check: z.string(),
+  // Gendered Arabic forms (see kidText). Optional: packs built before they existed, and English packs, fall back to the plain text.
+  reveal_ar_m: z.string().optional(), reveal_ar_f: z.string().optional(), next_check_ar_m: z.string().optional(), next_check_ar_f: z.string().optional() });
 export const PackOut = z.object({
   usable: z.boolean(),
   library_topic_id: z.enum(['fractions', 'negatives', 'photosynthesis']).nullable(),
@@ -25,8 +28,11 @@ export type PackOut = z.infer<typeof PackOut>;
 
 const kidSchema = {
   type: 'object',
-  properties: { misconception: { type: 'string' }, helped_if: { type: 'string' }, hurt_if: { type: 'string' }, reveal: { type: 'string' }, next_check: { type: 'string' } },
-  required: ['misconception', 'helped_if', 'hurt_if', 'reveal', 'next_check'],
+  properties: {
+    misconception: { type: 'string' }, helped_if: { type: 'string' }, hurt_if: { type: 'string' }, reveal: { type: 'string' }, next_check: { type: 'string' },
+    reveal_ar_m: { type: 'string' }, reveal_ar_f: { type: 'string' }, next_check_ar_m: { type: 'string' }, next_check_ar_f: { type: 'string' },
+  },
+  required: ['misconception', 'helped_if', 'hurt_if', 'reveal', 'next_check', 'reveal_ar_m', 'reveal_ar_f', 'next_check_ar_m', 'next_check_ar_f'],
   additionalProperties: false,
 };
 export const PACK_JSON_SCHEMA = {

@@ -1,8 +1,8 @@
 import { SCORER_JSON_SCHEMA, ScorerOut, type ScoreJson } from '../../shared/schemas';
-import { feedback, KID_IDS, kidById, topicById, type Lang } from '../../shared/data';
+import { feedback, KID_IDS, kidById, topicById, type KidId, type Lang } from '../../shared/data';
 import { AIError, claudeJSON } from './clients';
 import { scorerSystemFor } from './prompts';
-import { DEFAULT_SETTING, kidName, swapFromDefault, type ClassSetting } from '../../shared/setting';
+import { DEFAULT_SETTING, kidName, kidText, swapFromDefault, type ClassSetting } from '../../shared/setting';
 import type { TurnRec } from '../rules/score';
 
 export type AiPart = NonNullable<ScoreJson['ai']>;
@@ -10,11 +10,13 @@ export type AiPart = NonNullable<ScoreJson['ai']>;
 export function fallbackFeedback(score: ScoreJson, lang: Lang, setting: ClassSetting = DEFAULT_SETTING): AiPart {
   const f = feedback[score.focus_move] ?? feedback.reached;
   const topic = topicById(score.topic_id);
-  const tip = swapFromDefault(f.tip[lang] as string, setting);
+  // The lina and yazan tips are about one kid; every other tip is class-wide.
+  const tipKid: KidId | null = score.focus_move === 'lina' || score.focus_move === 'yazan' ? score.focus_move : null;
+  const tip = tipKid ? kidText(tipKid, f.tip, setting, lang) : swapFromDefault(f.tip[lang] as string, setting);
   let trySay: string;
   if (typeof f.try_saying === 'string' && f.try_saying.startsWith('next_check:')) {
-    const kid = f.try_saying.split(':')[1] as keyof typeof topic.kids;
-    trySay = swapFromDefault(topic.kids[kid].next_check[lang], setting);
+    const kid = f.try_saying.split(':')[1] as KidId;
+    trySay = kidText(kid, topic.kids[kid].next_check, setting, lang);
   } else trySay = swapFromDefault(f.try_saying[lang], setting);
   const fin = score.final_levels;
   const anyFully = score.moves.find((m) => m.key === 'reached')!.points > 0 && KID_IDS.some((k) => fin[k] === 2);

@@ -12,6 +12,7 @@
     "test:judge": "tsx scripts/test-judge.ts",
     "test:plan": "tsx scripts/test-plan.ts",
     "test:setting": "tsx scripts/test-setting.ts",
+    "test:kidtext": "tsx scripts/test-kidtext.ts",
     "gen:audio": "tsx scripts/gen-audio.ts",
     "gen:avatars": "tsx scripts/gen-avatars.ts",
     "bench": "tsx scripts/bench.ts",

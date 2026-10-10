@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { PDFDocument } from 'pdf-lib';
 import sharp from 'sharp';
 import { eq } from 'drizzle-orm';
-import { KID_IDS, libraryTopics, registerTopic, type KidId, type Lang, type TopicDef, type TopicKid } from '../../shared/data';
+import { KID_IDS, libraryTopics, registerTopic, type KidId, type L10nKid, type Lang, type TopicDef, type TopicKid } from '../../shared/data';
 import { defaultsFor, type PlanDefaults } from '../../shared/plan';
 import { type PackFailReason, type PackInfo, type PageRange } from '../../shared/pack';
 import { db, packs } from '../db';
@@ -81,6 +81,16 @@ async function callPack(material: any[], language: Lang): Promise<PackOut> {
 
 const other = (l: Lang): Lang => (l === 'ar' ? 'en' : 'ar');
 
+/** One kid line in both languages. Arabic packs also keep the boy and girl forms (blank or missing falls back to the plain text, which kidText does). */
+function kidL10n(text: string, m: string | undefined, f: string | undefined, language: Lang): L10nKid {
+  const out = { [language]: text, [other(language)]: text } as unknown as L10nKid;
+  if (language === 'ar') {
+    if (m?.trim()) out.ar_m = m.trim();
+    if (f?.trim()) out.ar_f = f.trim();
+  }
+  return out;
+}
+
 export function buildInfo(out: PackOut, id: string, language: Lang, source: string | null): PackInfo {
   if (!out.usable) throw new PackError('not_lesson');
   const steps = out.steps.slice(0, 5);
@@ -98,8 +108,8 @@ export function buildInfo(out: PackOut, id: string, language: Lang, source: stri
     const tk: TopicKid = {
       start_level: k === 'yazan' ? 1 : 0,
       misconception: d.misconception, helped_if: d.helped_if, hurt_if: d.hurt_if,
-      reveal: { [language]: d.reveal, [other(language)]: d.reveal } as any,
-      next_check: { [language]: d.next_check, [other(language)]: d.next_check } as any,
+      reveal: kidL10n(d.reveal, d.reveal_ar_m, d.reveal_ar_f, language),
+      next_check: kidL10n(d.next_check, d.next_check_ar_m, d.next_check_ar_f, language),
     };
     return [k, tk];
   })) as Record<KidId, TopicKid>;

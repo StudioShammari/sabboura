@@ -2,7 +2,7 @@ import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useParams } from 'wouter';
 import { CircleHelp, Lightbulb, Rocket, UserRound, Users } from 'lucide-react';
 import { KID_IDS, topicById, type KidId, type Lang, type Level } from '@shared/data';
-import { DEFAULT_SETTING, kidIdentity, kidName, normalizeSetting, settingLabel, type ClassSetting } from '@shared/setting';
+import { DEFAULT_SETTING, kidIdentity, kidName, kidText, normalizeSetting, settingLabel, type ClassSetting } from '@shared/setting';
 import type { ScoreJson, ScoreMove } from '@shared/schemas';
 import { KidAvatar, MiniAvatar } from '@/components/KidAvatar';
 import { StateBall } from '@/components/StateBall';
@@ -201,9 +201,9 @@ export default function Review() {
             const back = (
               <div className="back" aria-hidden={!flipped.has(k)}>
                 <h4>{def.name[L]}</h4>
-                <div>{tk.reveal[L]}</div>
+                <div>{kidText(k, tk.reveal, setting, L)}</div>
                 <div className={`reveal-stamp ${ok ? 'ok' : 'no'} ${flipped.has(k) ? 'stamp-in' : ''}`}>{ok ? (L === 'ar' ? 'فهم' : 'Got it') : (L === 'ar' ? 'ما زال يفكّر' : 'Still thinking')}</div>
-                {!ok && <div style={{ fontWeight: 600 }}>{L === 'ar' ? 'جرّب تسأل: ' : 'Try asking: '}{tk.next_check[L]}</div>}
+                {!ok && <div style={{ fontWeight: 600 }}>{L === 'ar' ? 'جرّب تسأل: ' : 'Try asking: '}{kidText(k, tk.next_check, setting, L)}</div>}
               </div>
             );
             return (

@@ -135,11 +135,15 @@
           "hurt_if": "Says or implies that the bigger number makes the bigger fraction.",
           "reveal": {
             "en": "Thought a bigger bottom number means a bigger fraction. Needed to see that more equal parts means each part is smaller.",
-            "ar": "كان مفكّر إنه كل ما كبر الرقم تحت بيكبر الكسر. كان بدّه يشوف إنه كل ما زادت القطع، صغرت كل قطعة."
+            "ar": "كان مفكّر إنه كل ما كبر الرقم تحت بيكبر الكسر. كان بدّه يشوف إنه كل ما زادت القطع، صغرت كل قطعة.",
+            "ar_m": "كان مفكّر إنه كل ما كبر الرقم تحت بيكبر الكسر. كان بدّه يشوف إنه كل ما زادت القطع، صغرت كل قطعة.",
+            "ar_f": "كانت مفكّرة إنه كل ما كبر الرقم تحت بيكبر الكسر. كانت بدّها تشوف إنه كل ما زادت القطع، صغرت كل قطعة."
           },
           "next_check": {
             "en": "Which is bigger, 1/5 or 1/4? How do you know?",
-            "ar": "أيهما أكبر: 1/5 ولا 1/4؟ كيف عرفت؟"
+            "ar": "أيهما أكبر: 1/5 ولا 1/4؟ كيف عرفت؟",
+            "ar_m": "أيهما أكبر: 1/5 ولا 1/4؟ كيف عرفت؟",
+            "ar_f": "أيهما أكبر: 1/5 ولا 1/4؟ كيف عرفتي؟"
           }
         },
         "lina": {
@@ -149,11 +153,15 @@
           "hurt_if": "Treats the top and bottom numbers as two separate numbers to compare.",
           "reveal": {
             "en": "Saw a fraction as two separate numbers. A drawing of one whole cut into parts, or a number line, would have helped.",
-            "ar": "كانت شايفة الكسر رقمين منفصلين. رسمة لشي كامل مقسوم لقطع، أو خط الأعداد، كان رح يساعدها."
+            "ar": "كانت شايفة الكسر رقمين منفصلين. رسمة لشي كامل مقسوم لقطع، أو خط الأعداد، كان رح يساعدها.",
+            "ar_m": "كان شايف الكسر رقمين منفصلين. رسمة لشي كامل مقسوم لقطع، أو خط الأعداد، كان رح يساعده.",
+            "ar_f": "كانت شايفة الكسر رقمين منفصلين. رسمة لشي كامل مقسوم لقطع، أو خط الأعداد، كان رح يساعدها."
           },
           "next_check": {
             "en": "Show me where 1/3 goes on a line from 0 to 1.",
-            "ar": "وين بتحطي 1/3 على خط من 0 لـ 1؟"
+            "ar": "وين بتحطي 1/3 على خط من 0 لـ 1؟",
+            "ar_m": "وين بتحط 1/3 على خط من 0 لـ 1؟",
+            "ar_f": "وين بتحطي 1/3 على خط من 0 لـ 1؟"
           }
         },
         "sara": {
@@ -163,11 +171,15 @@
           "hurt_if": "Says 'just memorise the rule' or only repeats the rule.",
           "reveal": {
             "en": "Had memorised the rule with no reason. Needed to hear why it works.",
-            "ar": "كانت حافظة القاعدة بدون ما تعرف ليش. كانت بدها تسمع السبب."
+            "ar": "كانت حافظة القاعدة بدون ما تعرف ليش. كانت بدها تسمع السبب.",
+            "ar_m": "كان حافظ القاعدة بدون ما يعرف ليش. كان بدّه يسمع السبب.",
+            "ar_f": "كانت حافظة القاعدة بدون ما تعرف ليش. كانت بدها تسمع السبب."
           },
           "next_check": {
             "en": "Why is 1/8 smaller than 1/4? Tell me the reason, not the rule.",
-            "ar": "ليش 1/8 أصغر من 1/4؟ احكيلي السبب، مش القاعدة."
+            "ar": "ليش 1/8 أصغر من 1/4؟ احكيلي السبب، مش القاعدة.",
+            "ar_m": "ليش 1/8 أصغر من 1/4؟ احكيلي السبب، مش القاعدة.",
+            "ar_f": "ليش 1/8 أصغر من 1/4؟ احكيلي السبب، مش القاعدة."
           }
         },
         "khaled": {
@@ -176,12 +188,16 @@
           "helped_if": "Uses a concrete real-life example (mansaf, pizza, ka'ak, a chocolate bar, money).",
           "hurt_if": "Says it only matters for the exam.",
           "reveal": {
-            "en": "Couldn't see where he'd use it. A real-life example (mansaf, pizza, ka'ak) would have reached him.",
-            "ar": "ما كان شايف وين رح يستخدمها. مثال من الحياة (منسف، بيتزا، كعك) كان رح يوصله."
+            "en": "Couldn't see where they'd use it. A real-life example (mansaf, pizza, ka'ak) would have reached them.",
+            "ar": "ما كان شايف وين رح يستخدمها. مثال من الحياة (منسف، بيتزا، كعك) كان رح يوصله.",
+            "ar_m": "ما كان شايف وين رح يستخدمها. مثال من الحياة (منسف، بيتزا، كعك) كان رح يوصله.",
+            "ar_f": "ما كانت شايفة وين رح تستخدمها. مثال من الحياة (منسف، بيتزا، كعك) كان رح يوصلها."
           },
           "next_check": {
             "en": "You want the biggest slice of pizza: 1/6 or 1/3?",
-            "ar": "بدك أكبر قطعة بيتزا: 1/6 ولا 1/3؟"
+            "ar": "بدك أكبر قطعة بيتزا: 1/6 ولا 1/3؟",
+            "ar_m": "بدك أكبر قطعة بيتزا: 1/6 ولا 1/3؟",
+            "ar_f": "بدك أكبر قطعة بيتزا: 1/6 ولا 1/3؟"
           }
         },
         "yazan": {
@@ -190,12 +206,16 @@
           "helped_if": "Gives him a harder challenge (e.g. which is bigger, 3/4 or 4/5?) or asks him to explain to the class.",
           "hurt_if": "Repeats the same basic point again with nothing new.",
           "reveal": {
-            "en": "Already understood. A harder challenge (3/4 or 4/5?) would have kept him with you.",
-            "ar": "كان فاهم من الأول. سؤال أصعب (3/4 ولا 4/5؟) كان رح يخلّيه معك."
+            "en": "Already understood. A harder challenge (3/4 or 4/5?) would have kept them with you.",
+            "ar": "كان فاهم من الأول. سؤال أصعب (3/4 ولا 4/5؟) كان رح يخلّيه معك.",
+            "ar_m": "كان فاهم من الأول. سؤال أصعب (3/4 ولا 4/5؟) كان رح يخلّيه معك.",
+            "ar_f": "كانت فاهمة من الأول. سؤال أصعب (3/4 ولا 4/5؟) كان رح يخلّيها معك."
           },
           "next_check": {
             "en": "Which is bigger, 3/4 or 4/5? Explain how you know.",
-            "ar": "أيهما أكبر: 3/4 ولا 4/5؟ فسّر كيف عرفت."
+            "ar": "أيهما أكبر: 3/4 ولا 4/5؟ فسّر كيف عرفت.",
+            "ar_m": "أيهما أكبر: 3/4 ولا 4/5؟ فسّر كيف عرفت.",
+            "ar_f": "أيهما أكبر: 3/4 ولا 4/5؟ فسّري كيف عرفتي."
           }
         }
       }
@@ -216,11 +236,15 @@
           "hurt_if": "Compares negative numbers by their digits only.",
           "reveal": {
             "en": "Compared -5 and -2 by the digits. A number line or temperatures would have helped.",
-            "ar": "كان بقارن −5 و −2 بالأرقام بس. خط الأعداد أو درجات الحرارة كانت رح تساعده."
+            "ar": "كان بقارن −5 و −2 بالأرقام بس. خط الأعداد أو درجات الحرارة كانت رح تساعده.",
+            "ar_m": "كان بقارن −5 و −2 بالأرقام بس. خط الأعداد أو درجات الحرارة كانت رح تساعده.",
+            "ar_f": "كانت بتقارن −5 و −2 بالأرقام بس. خط الأعداد أو درجات الحرارة كانت رح تساعدها."
           },
           "next_check": {
             "en": "Which is colder, -5° or -2°?",
-            "ar": "أيهما أبرد: −5 ولا −2 درجة؟"
+            "ar": "أيهما أبرد: −5 ولا −2 درجة؟",
+            "ar_m": "أيهما أبرد: −5 ولا −2 درجة؟",
+            "ar_f": "أيهما أبرد: −5 ولا −2 درجة؟"
           }
         },
         "lina": {
@@ -230,11 +254,15 @@
           "hurt_if": "Presents negative numbers as rules with no meaning.",
           "reveal": {
             "en": "Didn't believe negative numbers are real. Debt or a temperature below zero would have made them real.",
-            "ar": "ما كانت مصدقة إنه الأعداد السالبة حقيقية. الدَّين أو الحرارة تحت الصفر كانت رح تقنعها."
+            "ar": "ما كانت مصدقة إنه الأعداد السالبة حقيقية. الدَّين أو الحرارة تحت الصفر كانت رح تقنعها.",
+            "ar_m": "ما كان مصدّق إنه الأعداد السالبة حقيقية. الدَّين أو الحرارة تحت الصفر كانت رح تقنعه.",
+            "ar_f": "ما كانت مصدقة إنه الأعداد السالبة حقيقية. الدَّين أو الحرارة تحت الصفر كانت رح تقنعها."
           },
           "next_check": {
             "en": "Tell me one place in real life where you see a negative number.",
-            "ar": "احكيلي مكان بالحياة بتشوفي فيه عدد سالب."
+            "ar": "احكيلي مكان بالحياة بتشوفي فيه عدد سالب.",
+            "ar_m": "احكيلي مكان بالحياة بتشوف فيه عدد سالب.",
+            "ar_f": "احكيلي مكان بالحياة بتشوفي فيه عدد سالب."
           }
         },
         "sara": {
@@ -244,11 +272,15 @@
           "hurt_if": "Says 'two minuses make a plus, just memorise it'.",
           "reveal": {
             "en": "Thought taking away a negative still makes it smaller. Removing a debt shows why it goes up.",
-            "ar": "كانت مفكرة إنه الطرح دايماً بنقّص. شطب دَين بوضّح ليش النتيجة بتزيد."
+            "ar": "كانت مفكرة إنه الطرح دايماً بنقّص. شطب دَين بوضّح ليش النتيجة بتزيد.",
+            "ar_m": "كان مفكر إنه الطرح دايماً بنقّص. شطب دَين بوضّح ليش النتيجة بتزيد.",
+            "ar_f": "كانت مفكرة إنه الطرح دايماً بنقّص. شطب دَين بوضّح ليش النتيجة بتزيد."
           },
           "next_check": {
             "en": "You owe 2 dinars and someone cancels the debt. Are you richer or poorer?",
-            "ar": "عليكي دينارين، وحدا شطب الدَّين. صرتي أغنى ولا أفقر؟"
+            "ar": "عليكي دينارين، وحدا شطب الدَّين. صرتي أغنى ولا أفقر؟",
+            "ar_m": "عليك دينارين، وحدا شطب الدَّين. صرت أغنى ولا أفقر؟",
+            "ar_f": "عليكي دينارين، وحدا شطب الدَّين. صرتي أغنى ولا أفقر؟"
           }
         },
         "khaled": {
@@ -258,11 +290,15 @@
           "hurt_if": "Says it only matters for the exam.",
           "reveal": {
             "en": "Needed a real example: temperature, money or lift floors.",
-            "ar": "كان بدّه مثال من الحياة: الحرارة، المصاري، أو طوابق المصعد."
+            "ar": "كان بدّه مثال من الحياة: الحرارة، المصاري، أو طوابق المصعد.",
+            "ar_m": "كان بدّه مثال من الحياة: الحرارة، المصاري، أو طوابق المصعد.",
+            "ar_f": "كانت بدّها مثال من الحياة: الحرارة، المصاري، أو طوابق المصعد."
           },
           "next_check": {
             "en": "The lift is at floor -1 and goes up 3 floors. Where is it now?",
-            "ar": "المصعد على طابق −1 وطلع 3 طوابق. وين صار؟"
+            "ar": "المصعد على طابق −1 وطلع 3 طوابق. وين صار؟",
+            "ar_m": "المصعد على طابق −1 وطلع 3 طوابق. وين صار؟",
+            "ar_f": "المصعد على طابق −1 وطلع 3 طوابق. وين صار؟"
           }
         },
         "yazan": {
@@ -271,12 +307,16 @@
           "helped_if": "Gives a harder challenge (e.g. -3 - (-7)) or asks him to explain to the class.",
           "hurt_if": "Repeats the basics with nothing new.",
           "reveal": {
-            "en": "Already understood. A harder problem like -3 - (-7) would have kept him with you.",
-            "ar": "كان فاهم من الأول. مسألة أصعب مثل −3 − (−7) كانت رح تخلّيه معك."
+            "en": "Already understood. A harder problem like -3 - (-7) would have kept them with you.",
+            "ar": "كان فاهم من الأول. مسألة أصعب مثل −3 − (−7) كانت رح تخلّيه معك.",
+            "ar_m": "كان فاهم من الأول. مسألة أصعب مثل −3 − (−7) كانت رح تخلّيه معك.",
+            "ar_f": "كانت فاهمة من الأول. مسألة أصعب مثل −3 − (−7) كانت رح تخلّيها معك."
           },
           "next_check": {
             "en": "What is -3 - (-7)? Show it on a number line.",
-            "ar": "قديش −3 − (−7)؟ وضّحها على خط الأعداد."
+            "ar": "قديش −3 − (−7)؟ وضّحها على خط الأعداد.",
+            "ar_m": "قديش −3 − (−7)؟ وضّحها على خط الأعداد.",
+            "ar_f": "قديش −3 − (−7)؟ وضّحيها على خط الأعداد."
           }
         }
       }
@@ -297,11 +337,15 @@
           "hurt_if": "Says plants eat or get their food from the soil.",
           "reveal": {
             "en": "Thought plants eat from the soil. Needed to hear that they make their own food from air, water and light.",
-            "ar": "كان مفكر إنه النبتة بتوكل من التراب. كان لازم يسمع إنها بتصنع أكلها من الهوا والمي والضو."
+            "ar": "كان مفكر إنه النبتة بتوكل من التراب. كان لازم يسمع إنها بتصنع أكلها من الهوا والمي والضو.",
+            "ar_m": "كان مفكر إنه النبتة بتوكل من التراب. كان لازم يسمع إنها بتصنع أكلها من الهوا والمي والضو.",
+            "ar_f": "كانت مفكرة إنه النبتة بتوكل من التراب. كان لازم تسمع إنها بتصنع أكلها من الهوا والمي والضو."
           },
           "next_check": {
             "en": "A tree weighs 500 kg. Where did most of that mass come from?",
-            "ar": "شجرة وزنها 500 كيلو. من وين إجا معظم وزنها؟"
+            "ar": "شجرة وزنها 500 كيلو. من وين إجا معظم وزنها؟",
+            "ar_m": "شجرة وزنها 500 كيلو. من وين إجا معظم وزنها؟",
+            "ar_f": "شجرة وزنها 500 كيلو. من وين إجا معظم وزنها؟"
           }
         },
         "lina": {
@@ -311,11 +355,15 @@
           "hurt_if": "Says plants only breathe at night, or don't breathe.",
           "reveal": {
             "en": "Thought plants don't breathe. Needed to hear that they respire day and night.",
-            "ar": "كانت مفكرة إنه النباتات ما بتتنفس. كان لازم تسمع إنها بتتنفس ليل ونهار."
+            "ar": "كانت مفكرة إنه النباتات ما بتتنفس. كان لازم تسمع إنها بتتنفس ليل ونهار.",
+            "ar_m": "كان مفكر إنه النباتات ما بتتنفس. كان لازم يسمع إنها بتتنفس ليل ونهار.",
+            "ar_f": "كانت مفكرة إنه النباتات ما بتتنفس. كان لازم تسمع إنها بتتنفس ليل ونهار."
           },
           "next_check": {
             "en": "Does a plant breathe at night? And in the day?",
-            "ar": "النبتة بتتنفس بالليل؟ وبالنهار؟"
+            "ar": "النبتة بتتنفس بالليل؟ وبالنهار؟",
+            "ar_m": "النبتة بتتنفس بالليل؟ وبالنهار؟",
+            "ar_f": "النبتة بتتنفس بالليل؟ وبالنهار؟"
           }
         },
         "sara": {
@@ -325,11 +373,15 @@
           "hurt_if": "Says plants 'breathe CO2' or mixes the two processes up.",
           "reveal": {
             "en": "Mixed up photosynthesis and breathing. Needed the two processes side by side.",
-            "ar": "كانت خالطة بين البناء الضوئي والتنفس. كانت بدها تشوفهم جنب بعض."
+            "ar": "كانت خالطة بين البناء الضوئي والتنفس. كانت بدها تشوفهم جنب بعض.",
+            "ar_m": "كان خالط بين البناء الضوئي والتنفس. كان بدّه يشوفهم جنب بعض.",
+            "ar_f": "كانت خالطة بين البناء الضوئي والتنفس. كانت بدها تشوفهم جنب بعض."
           },
           "next_check": {
             "en": "What does a leaf take in for photosynthesis, and what for respiration?",
-            "ar": "شو بتاخد الورقة بالبناء الضوئي؟ وشو بتاخد بالتنفس؟"
+            "ar": "شو بتاخد الورقة بالبناء الضوئي؟ وشو بتاخد بالتنفس؟",
+            "ar_m": "شو بتاخد الورقة بالبناء الضوئي؟ وشو بتاخد بالتنفس؟",
+            "ar_f": "شو بتاخد الورقة بالبناء الضوئي؟ وشو بتاخد بالتنفس؟"
           }
         },
         "khaled": {
@@ -339,11 +391,15 @@
           "hurt_if": "Sticks to textbook definitions only.",
           "reveal": {
             "en": "Needed something real: most of a tree's mass comes from the air.",
-            "ar": "كان بدّه إشي حقيقي: معظم وزن الشجرة جاي من الهوا."
+            "ar": "كان بدّه إشي حقيقي: معظم وزن الشجرة جاي من الهوا.",
+            "ar_m": "كان بدّه إشي حقيقي: معظم وزن الشجرة جاي من الهوا.",
+            "ar_f": "كانت بدّها إشي حقيقي: معظم وزن الشجرة جاي من الهوا."
           },
           "next_check": {
             "en": "Name one food you ate today that started with photosynthesis.",
-            "ar": "احكيلي أكلة أكلتها اليوم بلّشت من البناء الضوئي."
+            "ar": "احكيلي أكلة أكلتها اليوم بلّشت من البناء الضوئي.",
+            "ar_m": "احكيلي أكلة أكلتها اليوم بلّشت من البناء الضوئي.",
+            "ar_f": "احكيلي أكلة أكلتها اليوم بلّشت من البناء الضوئي."
           }
         },
         "yazan": {
@@ -352,12 +408,16 @@
           "helped_if": "Gives a harder question (e.g. why does a plant in a dark room die even with water and soil?) or asks him to explain to the class.",
           "hurt_if": "Repeats the basics with nothing new.",
           "reveal": {
-            "en": "Already understood. A harder question (why does a plant die in the dark?) would have kept him with you.",
-            "ar": "كان فاهم من الأول. سؤال أصعب (ليش النبتة بتموت بالعتمة؟) كان رح يخلّيه معك."
+            "en": "Already understood. A harder question (why does a plant die in the dark?) would have kept them with you.",
+            "ar": "كان فاهم من الأول. سؤال أصعب (ليش النبتة بتموت بالعتمة؟) كان رح يخلّيه معك.",
+            "ar_m": "كان فاهم من الأول. سؤال أصعب (ليش النبتة بتموت بالعتمة؟) كان رح يخلّيه معك.",
+            "ar_f": "كانت فاهمة من الأول. سؤال أصعب (ليش النبتة بتموت بالعتمة؟) كان رح يخلّيها معك."
           },
           "next_check": {
             "en": "Why does a plant in a dark room die even with water and soil?",
-            "ar": "ليش النبتة بتموت بغرفة معتمة حتى لو في مي وتراب؟"
+            "ar": "ليش النبتة بتموت بغرفة معتمة حتى لو في مي وتراب؟",
+            "ar_m": "ليش النبتة بتموت بغرفة معتمة حتى لو في مي وتراب؟",
+            "ar_f": "ليش النبتة بتموت بغرفة معتمة حتى لو في مي وتراب؟"
           }
         }
       }
