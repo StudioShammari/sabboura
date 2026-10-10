@@ -15,7 +15,7 @@ import { closeMic, fadeOutAll, getCtx, getMic, micName, openMic, preloadLesson, 
 import { Recorder } from '@/lib/recorder';
 import { sfx } from '@/lib/sfx';
 import { deviceId, getSettings, setSettings, useSettings } from '@/lib/store';
-import { playChorus, playLocalFailsafe, playTurn, type TurnUI } from '@/lib/turnPlayer';
+import { playChorus, playLocalFailsafe, playQuestion, playTurn, type TurnUI } from '@/lib/turnPlayer';
 import { MeetClass, type StageResult } from '@/components/MeetClass';
 import { Decor } from '@/components/Decor';
 
@@ -78,6 +78,8 @@ export default function Classroom() {
   const startingRec = useRef(false);
   const keepMic = useRef(false);
   const wake = useRef<WakeLockSentinel | null>(null);
+  const raisedCount = useRef(0);
+  const lastRaised = useRef<KidId | null>(null);
 
   const setPhaseBoth = (p: Phase) => { phaseRef.current = p; setPhase(p); };
   const patchView = useCallback((k: KidId, p: Partial<CardView>) => setViews((v) => ({ ...v, [k]: { ...v[k], ...p } })), []);
@@ -219,7 +221,7 @@ export default function Classroom() {
     const gen = ++genRef.current;
     setTranscript(text); setMarks([]); setCaption(null); setHeard(source === 'voice');
     setPhaseBoth('processing');
-    patchAll({ thinking: true, hand: false, speaking: false, dim: false, asked: false });
+    patchAll({ thinking: true, hand: false, raised: false, speaking: false, dim: false, asked: false });
     if (unlockTimer.current) clearTimeout(unlockTimer.current);
     unlockTimer.current = setTimeout(() => { if (phaseRef.current === 'processing' && genRef.current === gen) setPhaseBoth('playing'); }, 12000);
     await playTurn({ lessonId: id, text, source, seconds, lang: getSettings().lang, title: getSettings().title, ui: makeUI(gen), setAbort: (f) => (abortRef.current = f) });
@@ -232,6 +234,40 @@ export default function Classroom() {
     await playLocalFailsafe(getSettings().lang, ui);
     ui.onDone();
   }, [makeUI]);
+
+  // ---------- raised hands ----------
+  const callOn = useCallback(async (kid: KidId) => {
+    if (phaseRef.current !== 'idle') return;
+    const gen = ++genRef.current;
+    setPhaseBoth('processing'); setCaption(null); setPopKid(null);
+    patchAll({ raised: false, hand: false, speaking: false, dim: false });
+    await unlockAudio();
+    await playQuestion({ lessonId: id, kid, lang: getSettings().lang, ui: makeUI(gen), setAbort: (f) => (abortRef.current = f) });
+  }, [id, makeUI, patchAll]);
+
+  const anyRaised = KID_IDS.some((k) => views[k]?.raised);
+  useEffect(() => {
+    if (!ready || meet || demo || phase !== 'idle') return;
+    if (anyRaised) {
+      const t = setTimeout(() => patchAll({ raised: false }), 25000);
+      return () => clearTimeout(t);
+    }
+    if (raisedCount.current >= 8) return;
+    const delay = raisedCount.current === 0 ? 7000 : 10000 + Math.random() * 5000;
+    const t = setTimeout(() => {
+      const lv = levelsRef.current;
+      let pool = KID_IDS.filter((k) => (k === 'yazan' ? lv.yazan === 0 : lv[k] < 2));
+      if (!pool.length) pool = KID_IDS.filter((k) => k !== 'yazan');
+      const fresh = pool.filter((k) => k !== lastRaised.current);
+      const list = fresh.length ? fresh : pool;
+      const kid = raisedCount.current === 0 && list.includes('omar') ? 'omar' : list[Math.floor(Math.random() * list.length)];
+      lastRaised.current = kid;
+      raisedCount.current++;
+      patchView(kid, { raised: true });
+      sfx.badgeUp();
+    }, delay);
+    return () => clearTimeout(t);
+  }, [ready, meet, demo, phase, anyRaised, turnNo, patchAll, patchView]);
 
   // ---------- mic ----------
   const micError = (e: unknown) => {
@@ -246,7 +282,7 @@ export default function Classroom() {
     genRef.current++;
     abortRef.current();
     fadeOutAll(150);
-    patchAll({ speaking: false, dim: false, thinking: false, hand: false });
+    patchAll({ speaking: false, dim: false, thinking: false, hand: false, raised: false });
     setChorus(null); setCaption(null);
     for (const k of KID_IDS) flushPending(k);
   };
@@ -509,7 +545,7 @@ export default function Classroom() {
 
       <section className="class-row">
         {KID_IDS.map((k) => (
-          <KidCard key={k} kid={k} level={levels[k] as Level} lang={lang} view={views[k] ?? {}} onBadge={() => setPopKid(popKid === k ? null : k)}
+          <KidCard key={k} kid={k} level={levels[k] as Level} lang={lang} view={views[k] ?? {}} onBadge={() => setPopKid(popKid === k ? null : k)} onCallOn={() => void callOn(k)}
             popover={popKid === k && (
               <div className="popover" role="dialog">
                 <b>{tr('whatMoved', lang)} {kidById(k).name[lang]}</b>

@@ -12,17 +12,21 @@ function Img({ src, alt, style }: { src: string; alt?: string; style?: React.CSS
   return <img src={src} alt={alt ?? ''} draggable={false} style={style} onError={() => { missing.add(src); setBad(true); }} />;
 }
 
-export function stateFor(kid: KidId, level: Level) {
+export type Mood = 'neutral' | 'happy' | 'confused' | 'eager' | 'bored';
+
+/** Face for a kid: eager while a hand is up, otherwise from the level (lost = confused, got it = happy). */
+export function stateFor(kid: KidId, level: Level, eager = false): Mood {
+  if (eager) return 'eager';
   if (kid === 'yazan') return level === 0 ? 'bored' : level === 1 ? 'neutral' : 'happy';
-  return level === 2 ? 'happy' : 'neutral';
+  return level === 2 ? 'happy' : level === 0 ? 'confused' : 'neutral';
 }
 
 /** Avatar image with 200 ms crossfade; falls back to the initial-letter tile. */
-export function KidAvatar({ kid, level, lang }: { kid: KidId; level: Level; lang: Lang }) {
-  const cur = stateFor(kid, level);
-  const states = kid === 'yazan' ? ['bored', 'neutral', 'happy'] : ['neutral', 'happy'];
+export function KidAvatar({ kid, level, lang, eager = false }: { kid: KidId; level: Level; lang: Lang; eager?: boolean }) {
+  const cur = stateFor(kid, level, eager);
+  const states: Mood[] = kid === 'yazan' ? ['bored', 'neutral', 'happy', 'eager'] : ['neutral', 'happy', 'confused', 'eager'];
   return (
-    <div className="avatar">
+    <div className="avatar" data-mood={cur}>
       <div className="initial-tile">{INITIAL[kid][lang]}</div>
       {states.map((s) => (
         <Img key={s} src={`/avatars/${kid}-${s}.webp`} style={{ opacity: s === cur ? 1 : 0 }} />

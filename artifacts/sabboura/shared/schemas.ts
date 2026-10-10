@@ -94,7 +94,7 @@ export const SCORER_JSON_SCHEMA = {
 // ---- shared turn types ----
 export type CheckType = 'none' | 'yes_no' | 'question';
 export type Helped = 'no' | 'partly' | 'fully';
-export type SpeakReason = 'objection' | 'answer' | 'timid_yes' | 'aha' | 'bored';
+export type SpeakReason = 'objection' | 'answer' | 'timid_yes' | 'aha' | 'bored' | 'question';
 
 export interface KidChange {
   from: Level;

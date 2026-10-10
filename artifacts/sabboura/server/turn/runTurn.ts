@@ -1,5 +1,5 @@
 import { and, eq } from 'drizzle-orm';
-import { KID_IDS, type KidId } from '../../shared/data';
+import { KID_IDS, kidById, type KidId } from '../../shared/data';
 import type { AudioEvent, CheckType, LineEvent, SpeakReason, StateEvent, Speaker, TimingsEvent, TurnEvent } from '../../shared/schemas';
 import { judgeTurn } from '../ai/judge';
 import { failsafeLine, generateLines, starterLine, type OutLine } from '../ai/kidLines';
@@ -39,7 +39,10 @@ export async function* runTurn(ctx: TurnCtx): AsyncGenerator<TurnEvent> {
 
     // 1-2. judge
     const j = await judgeTurn({
-      topicId: state.topicId, levels: state.levels, transcript, previous: state.last3,
+      topicId: state.topicId, levels: state.levels, transcript,
+      previous: state.pendingQuestion
+        ? [...state.last3, { turnNo: state.turnNo, transcript: `[${kidById(state.pendingQuestion.kid).name.en} raised a hand and asked the teacher: "${state.pendingQuestion.text}"]` }]
+        : state.last3,
       signal: ctx.signal, budgetLeftMs: budgetLeft,
     });
 
@@ -110,6 +113,7 @@ export async function* runTurn(ctx: TurnCtx): AsyncGenerator<TurnEvent> {
       state.last3 = [...state.last3, { turnNo, transcript }].slice(-3);
       state.linaAsked = linaAskedNow;
       state.lastTranscript = transcript;
+      state.pendingQuestion = null;
     };
 
     // 4. chorus
@@ -141,7 +145,9 @@ export async function* runTurn(ctx: TurnCtx): AsyncGenerator<TurnEvent> {
     });
     if (needAI.length) {
       const g = await generateLines({
-        topicId: state.topicId, lang: state.language, title: state.title, transcript, signal: ctx.signal,
+        topicId: state.topicId, lang: state.language, title: state.title,
+        transcript: state.pendingQuestion ? `(answering ${kidById(state.pendingQuestion.kid).name.en}'s question "${state.pendingQuestion.text}") ${transcript}` : transcript,
+        signal: ctx.signal,
         speakers: needAI.map((x) => x.s), levels,
       });
       timings.models.lines = g.model;

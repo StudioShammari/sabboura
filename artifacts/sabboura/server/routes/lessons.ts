@@ -9,6 +9,7 @@ import { transcribe } from '../ai/stt';
 import { scoreWithAI, fallbackFeedback } from '../ai/scorer';
 import { computeScore, withClarity, type TurnRec } from '../rules/score';
 import { runTurn } from '../turn/runTurn';
+import { runQuestion } from '../turn/runQuestion';
 import { openSSE } from '../turn/sse';
 import { dropState, getState, putState } from '../turn/state';
 import { since, withTimeout } from '../lib/timing';
@@ -41,7 +42,7 @@ lessonsRouter.post('/lessons', async (req, res) => {
   const levels = startLevels(topicId);
   putState({
     id: l.id, topicId, language: b.language, title: b.teacherTitle, attemptNo, levels, turnNo: 0, last3: [],
-    busy: false, startersUsed: new Set(), linaAsked: false, lastTranscript: '', startedAt: Date.now(),
+    busy: false, startersUsed: new Set(), linaAsked: false, lastTranscript: '', pendingQuestion: null, askedQuestions: [], startedAt: Date.now(),
   });
   res.status(201).json({ lessonId: l.id, turnNo: 0, levels });
 });
@@ -114,6 +115,22 @@ lessonsRouter.post('/lessons/:id/turn', async (req: Request, res: Response) => {
     events.push({ event: 'failsafe', data: { stage: 'crash', reason: String(e?.message ?? e), turnNo: s.turnNo + 1 } }, { event: 'done', data: { turnNo: s.turnNo } });
   }
   res.json({ events });
+});
+
+lessonsRouter.post('/lessons/:id/call-on', async (req: Request, res: Response) => {
+  const p = z.object({ kid: z.enum(KID_IDS) }).safeParse(req.body);
+  if (!p.success) return void res.status(400).json({ error: 'bad request' });
+  const s = await getState(String(req.params.id));
+  if (!s) return void res.status(404).json({ error: 'not found' });
+  const sse = openSSE(req, res);
+  try {
+    for await (const ev of runQuestion(s, p.data.kid, sse.signal)) sse.send(ev);
+  } catch (e: any) {
+    console.error('[call-on] crashed', e);
+    sse.send({ event: 'done', data: { turnNo: s.turnNo } });
+  } finally {
+    sse.end();
+  }
 });
 
 lessonsRouter.post('/lessons/:id/redo', async (req, res) => {

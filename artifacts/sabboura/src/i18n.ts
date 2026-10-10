@@ -49,6 +49,7 @@ export const strings = {
   yesNoTally: { ar: 'فاهمين؟', en: 'Understand?' },
   noOneMoved: { ar: 'ولا طالب تقدّم', en: 'No one moved up' },
   yourTurn: { ar: 'سؤال إلك', en: 'Your turn' },
+  callOn: { ar: 'اسمح بالسؤال لـ', en: 'Call on' },
   linaUnheard: { ar: 'لينا ما حكت ولا كلمة', en: "Lina hasn't said a word" },
   whispering: { ar: 'همس', en: 'whispering' },
   whatMoved: { ar: 'شو اللي حرّك', en: 'What moved' },

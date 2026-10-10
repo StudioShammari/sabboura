@@ -1,7 +1,7 @@
 import { chorusFor, kidById, type KidId, type Lang, type Title } from '@shared/data';
 import type { KidChange, LineEvent, StateEvent, TimingsEvent, TurnEvent } from '@shared/schemas';
 import { decodeB64, decodeTts, decodeUrl, findPre, loadManifest, playBuffer } from './audio';
-import { streamTurn } from './sse';
+import { streamCallOn, streamTurn } from './sse';
 
 export interface TurnUI {
   stale: () => boolean;
@@ -137,3 +137,39 @@ export async function playTurn(o: TurnOpts): Promise<void> {
 }
 
 export type { KidChange };
+
+/** A called-on kid asks a question: one line, one voice. Never shows an error; falls back to the local "again?" clip. */
+export async function playQuestion(o: { lessonId: string; kid: KidId; lang: Lang; ui: TurnUI; setAbort: (fn: () => void) => void }): Promise<void> {
+  const { ui, kid, lang } = o;
+  const ac = new AbortController();
+  o.setAbort(() => ac.abort());
+  const line = deferred<LineEvent | null>();
+  const audio = deferred<AudioBuffer | null>();
+  let first = false;
+  const firstOutput = () => { if (!first) { first = true; ui.onFirstOutput(); } };
+  const guard = setTimeout(() => ac.abort(), 14000);
+  try {
+    await streamCallOn(o.lessonId, kid, (ev) => {
+      ui.onEvent?.(ev.event, ev.data);
+      if (ev.event === 'line') { firstOutput(); line.resolve(ev.data); }
+      else if (ev.event === 'audio') {
+        const d = ev.data;
+        (d.url ? decodeUrl(d.url) : d.b64 ? decodeB64(d.b64) : Promise.resolve(null)).then((b) => audio.resolve(b));
+      } else if (ev.event === 'audio_failed') audio.resolve(null);
+      else if (ev.event === 'done') { line.resolve(null); audio.resolve(null); }
+    }, ac.signal);
+    const l = await line.p;
+    if (!l) throw new Error('no question');
+    if (ui.stale()) return;
+    const buf = await Promise.race([audio.p, sleep(9000).then(() => null)]);
+    if (ui.stale()) return;
+    ui.onSpeakStart(kid, l);
+    if (buf) await playBuffer(buf).done; else await sleep(readMs(l.text));
+    ui.onSpeakEnd(kid);
+  } catch {
+    if (!ui.stale()) { firstOutput(); await playLocalFailsafe(lang, ui, kid); }
+  } finally {
+    clearTimeout(guard);
+  }
+  ui.onDone();
+}

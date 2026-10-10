@@ -16,6 +16,9 @@ export interface LessonState {
   linaAsked: boolean;
   lastTranscript: string;
   startedAt: number;
+  /** A kid's raised-hand question the teacher has not answered yet. */
+  pendingQuestion: { kid: KidId; text: string } | null;
+  askedQuestions: string[];
 }
 
 const mem = new Map<string, LessonState>();
@@ -46,6 +49,8 @@ export async function getState(id: string): Promise<LessonState | null> {
     linaAsked: ts.some((t) => t.askedKid === 'lina'),
     lastTranscript: last?.transcript ?? '',
     startedAt: l.createdAt.getTime(),
+    pendingQuestion: null,
+    askedQuestions: [],
   };
   mem.set(id, s);
   return s;

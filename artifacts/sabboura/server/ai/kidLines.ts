@@ -31,6 +31,7 @@ export function cannedLine(topicId: string, kid: KidId, reason: SpeakReason, lan
   else if (reason === 'answer') l = kid === 'lina' ? canned.answer_lost[topicId]?.lina : canned.starters[topicId]?.[kid];
   else if (reason === 'aha') l = kid === 'lina' ? canned.reasons.aha_lina : canned.reasons.aha;
   else if (reason === 'bored') l = canned.reasons.bored;
+  else if (reason === 'question') l = canned.starters[topicId]?.[kid] ?? canned.reasons.bored;
   else l = canned.reasons.timid_yes;
   return l ? fromCanned(l, lang, title) : failsafeLine(kid, lang);
 }
@@ -44,6 +45,7 @@ export async function generateLines(args: {
   transcript: string;
   speakers: Speaker[];
   levels: Levels;
+  avoid?: string[];
   signal?: AbortSignal;
 }): Promise<LinesResult> {
   const t0 = performance.now();
@@ -52,6 +54,7 @@ export async function generateLines(args: {
     language: args.lang === 'ar' ? 'Arabic' : 'English',
     teacher_address: addressTerm(args.lang, args.title),
     teacher_said: args.transcript,
+    ...(args.avoid?.length ? { avoid: args.avoid } : {}),
     speakers: args.speakers.map((s) => {
       const d = kidById(s.kid);
       return {

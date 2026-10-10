@@ -1,13 +1,22 @@
 import type { TurnEvent } from '@shared/schemas';
 
 /** POST /turn and read SSE with fetch + a stream reader (never EventSource). Falls back to the JSON shape. */
-export async function streamTurn(
+export function streamTurn(
   lessonId: string,
   body: { text: string; source: string; teacherSeconds: number; clientTurnId: string },
   onEvent: (ev: TurnEvent) => void,
   signal?: AbortSignal,
 ): Promise<void> {
-  const res = await fetch(`/api/lessons/${lessonId}/turn`, {
+  return streamPost(`/api/lessons/${lessonId}/turn`, body, onEvent, signal);
+}
+
+/** A kid with a raised hand has been called on. */
+export function streamCallOn(lessonId: string, kid: string, onEvent: (ev: TurnEvent) => void, signal?: AbortSignal): Promise<void> {
+  return streamPost(`/api/lessons/${lessonId}/call-on`, { kid }, onEvent, signal);
+}
+
+async function streamPost(path: string, body: unknown, onEvent: (ev: TurnEvent) => void, signal?: AbortSignal): Promise<void> {
+  const res = await fetch(path, {
     method: 'POST', signal,
     headers: { Accept: 'text/event-stream', 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
