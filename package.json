@@ -1,0 +1,12 @@
+{
+  "name": "workspace",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:judge": "pnpm --filter @workspace/sabboura run test:judge --",
+    "gen:audio": "pnpm --filter @workspace/sabboura run gen:audio --",
+    "gen:avatars": "pnpm --filter @workspace/sabboura run gen:avatars --",
+    "bench": "pnpm --filter @workspace/sabboura run bench --",
+    "db:push": "pnpm --filter @workspace/sabboura run db:push"
+  }
+}

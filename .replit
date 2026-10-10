@@ -1,1 +1,27 @@
-modules = ["nodejs-24"]
+modules = ["nodejs-24", "python-base-3.13"]
+
+[workflows]
+runButton = "Project"
+
+[[ports]]
+localPort = 5055
+externalPort = 3000
+
+[[ports]]
+localPort = 20594
+externalPort = 80
+
+[userenv]
+
+[userenv.shared]
+CLAUDE_JUDGE_MODELS = "claude-opus-5-5,claude-opus-5,claude-sonnet-5"
+CLAUDE_LINES_MODELS = "claude-opus-5-5,claude-opus-5,claude-sonnet-5"
+CLAUDE_SCORER_MODELS = "claude-opus-5-5,claude-opus-5,claude-sonnet-5"
+IMAGE_MODEL = "gpt-image-2"
+STT_MODEL = "gpt-4o-mini-transcribe"
+TTS_MODEL = "gpt-audio-mini"
+
+[deployment]
+deploymentTarget = "vm"
+run = ["pnpm", "--filter", "@workspace/sabboura", "run", "start"]
+build = ["pnpm", "--filter", "@workspace/sabboura", "run", "build"]

@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Sabboura"
+description = "Teacher practice simulator with five AI kids"
+version = "1.0.0"
+id = "artifacts/sabboura"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 20594
+
+[services.development]
+run = "pnpm --filter @workspace/sabboura run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/sabboura", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/sabboura/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "20594"
+BASE_PATH = "/"

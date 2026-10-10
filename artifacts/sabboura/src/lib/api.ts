@@ -1,0 +1,45 @@
+import type { Lang, Levels, Title } from '@shared/data';
+import type { ScoreJson } from '@shared/schemas';
+
+async function json<T>(res: Response): Promise<T> {
+  const ct = res.headers.get('content-type') ?? '';
+  if (!res.ok || !ct.includes('json')) throw new Error(`bad response ${res.status}`);
+  return res.json();
+}
+const post = (url: string, body?: unknown, signal?: AbortSignal) =>
+  fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body), signal });
+
+export interface CreatedLesson { lessonId: string; turnNo: number; levels: Levels }
+export const createLesson = (b: { topicId: string; language: Lang; teacherTitle: Title; deviceId?: string; previousLessonId?: string }) =>
+  post('/api/lessons', b).then((r) => json<CreatedLesson>(r));
+
+export interface LessonInfo {
+  lesson: { id: string; topicId: string; language: Lang; teacherTitle: Title; attemptNo: number; ended: boolean };
+  turnNo: number;
+  levels: Levels;
+  turns: { turnNo: number; transcript: string; checkType: string; chorus: boolean; levelsAfter: Levels; lines: { kid: string; text: string }[] }[];
+}
+export const getLesson = (id: string) => fetch(`/api/lessons/${id}`).then((r) => json<LessonInfo>(r));
+
+export interface TranscribeResult { transcript: string; empty: boolean; seconds: number; sttMs: number }
+export async function transcribe(id: string, blob: Blob, mime: string, durationMs: number): Promise<TranscribeResult> {
+  const fd = new FormData();
+  const ext = /mp4/.test(mime) ? 'mp4' : 'webm';
+  fd.append('audio', blob, `turn.${ext}`);
+  fd.append('durationMs', String(Math.round(durationMs)));
+  fd.append('mime', mime);
+  return fetch(`/api/lessons/${id}/transcribe`, { method: 'POST', body: fd }).then((r) => json<TranscribeResult>(r));
+}
+export const redoTurn = (id: string) => post(`/api/lessons/${id}/redo`).then((r) => json<{ turnNo: number; levels: Levels; lastTranscript: string }>(r));
+export const endLesson = (id: string) => post(`/api/lessons/${id}/end`).then((r) => json<{ scoreUrl: string; score: ScoreJson }>(r));
+export const getScore = (id: string) => fetch(`/api/lessons/${id}/score`).then((r) => json<ScoreJson>(r));
+export const warmup = (force = false) => fetch(`/api/warmup${force ? '?force=1' : ''}`).then((r) => json<any>(r));
+export const getDebug = (id: string) => fetch(`/api/lessons/${id}/debug`).then((r) => json<any>(r));
+
+export interface ReplayTurn {
+  turnNo: number; transcript: string; chorus: boolean; checkType: string; askedKid: string | null;
+  state: Record<string, { to: 0 | 1 | 2; change: number; evidence: string | null }>;
+  lines: { idx: number; kid: string; text: string; text_en: string; audioUrl: string }[];
+}
+export interface Replay { language: Lang; title: Title; topicId: string; turns: ReplayTurn[] }
+export const getReplay = (id: string) => fetch(`/api/lessons/${id}/replay`).then((r) => json<Replay>(r));
