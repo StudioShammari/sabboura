@@ -1,0 +1,18 @@
+Yes, fix it. While checking your change I found three more small things, so please do all four. Keep the default class byte-identical (prompts and text), don't touch the score or the judge, and run test:kidtext, test:plan and test:body afterwards.
+
+1. «يا شباب» in a girls' class
+   - Two AI calls write lines the teacher could say to the whole class, and neither knows the class is all girls:
+     - the plan check: `next_time` for the explain, example and other rows (`PLAN_CHECK_SYSTEM` in server/plan/checkPlan.ts);
+     - the scorer: `one_tip` and `try_saying`.
+   - Add `classAddress(setting)` to shared/setting.ts. It returns '' unless the class is girls, so the default and boys' prompts stay as they are. For girls it returns: "This is a girls' class: when the teacher speaks to the whole class in Arabic, they say «يا بنات», never «يا شباب». Plural verbs keep the usual Jordanian form («لاحظوا يا بنات»). In English, say "everyone", never "guys"."
+   - Add it to the plan check's system prompt (a `planCheckSystemFor(setting)`, like `scorerSystemFor`) and to `scorerConditions`.
+   - Safety net in code: in a girls' class, change «يا شباب» to «يا بنات» in the plan check's next_time and in the scorer's one_tip and try_saying before they are saved.
+   - Add offline cases to test:kidtext: «لاحظوا يا شباب…» becomes «لاحظوا يا بنات…» in a girls' class and stays the same in boys' and mixed classes.
+
+2. The stamp on the flipped reveal cards (`reveal-stamp` in Review.tsx) says «فهم» or «ما زال يفكّر» for every kid. Use the shown kid's gender: «فهمت» and «ما زالت تفكّر» for girls. Today this is also wrong for Lina and Sara in the default class.
+
+3. The "Try asking…" line on the flipped reveal cards is cut off on every card at 1280×720, 1440×900 and 1920×1080, by 50–150 px. You can only reach it by scrolling inside the card, so nobody sees it.
+   - Make the stamp small (about 60 px) and put it in the top corner of the card instead of the middle, so the reveal text and the "Try asking" line both fit.
+   - Your screenshot tool can't click, so add a dev-only `?reveal=1` to the review URL that opens the page with every card flipped. Screenshot it at 1280×720 in Arabic and English, for all three topics. The last line of every card must be inside the card with no scrolling.
+
+4. In data/topics.json, photosynthesis, khaled, `next_check.ar_f`: «أكلتها» should be «أكلتيها».

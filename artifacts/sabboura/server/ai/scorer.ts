@@ -2,7 +2,7 @@ import { SCORER_JSON_SCHEMA, ScorerOut, type ScoreJson } from '../../shared/sche
 import { feedback, KID_IDS, kidById, topicById, type KidId, type Lang } from '../../shared/data';
 import { AIError, claudeJSON } from './clients';
 import { scorerSystemFor } from './prompts';
-import { DEFAULT_SETTING, kidName, kidText, swapFromDefault, type ClassSetting } from '../../shared/setting';
+import { DEFAULT_SETTING, kidName, fixClassAddress, kidText, swapFromDefault, type ClassSetting } from '../../shared/setting';
 import type { TurnRec } from '../rules/score';
 
 export type AiPart = NonNullable<ScoreJson['ai']>;
@@ -59,7 +59,7 @@ export async function scoreWithAI(args: { score: ScoreJson; turns: TurnRec[]; se
       });
       const v = r.value;
       const clarity = Math.max(0, Math.min(5, Math.round(v.clarity)));
-      return { clarity, clarity_reason: v.clarity_reason, why_it_worked: v.why_it_worked, one_tip: v.one_tip, try_saying: v.try_saying, fallback: false };
+      return { clarity, clarity_reason: v.clarity_reason, why_it_worked: v.why_it_worked, one_tip: fixClassAddress(v.one_tip, setting), try_saying: fixClassAddress(v.try_saying, setting), fallback: false };
     } catch (e) {
       last = e;
       if (!(e instanceof AIError) || !e.retryable) break;

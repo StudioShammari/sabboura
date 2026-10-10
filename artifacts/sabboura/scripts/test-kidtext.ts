@@ -1,7 +1,7 @@
 import { KID_IDS, libraryTopics, topicById, type KidId } from '../shared/data';
-import { DEFAULT_SETTING, PRESETS, kidText } from '../shared/setting';
+import { DEFAULT_SETTING, PRESETS, classAddress, fixClassAddress, kidText, scorerConditions } from '../shared/setting';
 import { fallbackFeedback } from '../server/ai/scorer';
-import { checkPlanCode } from '../server/plan/checkPlan';
+import { PLAN_CHECK_SYSTEM, checkPlanCode, planCheckSystemFor } from '../server/plan/checkPlan';
 import { PackOut } from '../server/packs/prompt';
 import { buildInfo } from '../server/packs/build';
 
@@ -74,6 +74,17 @@ const neu = buildInfo(out({ reveal_ar_m: 'كان فاهم', reveal_ar_f: 'كان
 check('new pack: girls get the feminine form', kidText('omar', neu.kids.omar.reveal, girls, 'ar') === 'كانت فاهمة' && kidText('omar', neu.kids.omar.next_check, girls, 'ar') === 'كيف عرفتي؟');
 const en = buildInfo(out({ reveal_ar_m: '', reveal_ar_f: '' }), 'p-en', 'en', null).topic!;
 check('English pack: blank forms ignored', !('ar_m' in en.kids.omar.reveal));
+
+// 9. «يا شباب» in a girls' class.
+const addr = 'لاحظوا يا شباب: كلما زاد عدد القطع صغرت كل قطعة.';
+check('girls: «يا شباب» becomes «يا بنات»', fixClassAddress(addr, girls) === 'لاحظوا يا بنات: كلما زاد عدد القطع صغرت كل قطعة.');
+check('boys and mixed: «يا شباب» stays', fixClassAddress(addr, boys) === addr && fixClassAddress(addr, DEFAULT_SETTING) === addr);
+check('classAddress empty for default and boys, set for girls', classAddress(DEFAULT_SETTING) === '' && classAddress(boys) === '' && classAddress(girls).includes('يا بنات'));
+check('plan check prompt: default and boys unchanged, girls add the note', planCheckSystemFor(DEFAULT_SETTING) === PLAN_CHECK_SYSTEM && planCheckSystemFor(boys) === PLAN_CHECK_SYSTEM && planCheckSystemFor(girls).includes('يا بنات'));
+check('scorer conditions carry the note for girls only', scorerConditions(girls).includes('يا بنات') && !scorerConditions(boys).includes('يا بنات') && scorerConditions(DEFAULT_SETTING) === '');
+
+// 10. photosynthesis, khaled, next_check.ar_f
+check('photosynthesis khaled next_check.ar_f uses «أكلتيها»', topicById('photosynthesis').kids.khaled.next_check.ar_f?.includes('أكلتيها') === true);
 
 const failed = results.filter((r) => !r[1]);
 console.log(`\n${results.length - failed.length}/${results.length} passed`);

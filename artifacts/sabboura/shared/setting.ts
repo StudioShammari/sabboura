@@ -200,6 +200,14 @@ export function judgeKidTableName(role: KidId, s: ClassSetting): string {
   const i = kidIdentity(role, s);
   return ` (called ${i.name.ar} / ${i.name.en}, a ${i.gender === 'f' ? 'girl' : 'boy'})`;
 }
+/** How the teacher addresses the whole class. Empty unless the class is girls, so default and boys' prompts stay as they are. */
+export function classAddress(s: ClassSetting): string {
+  if (s.group !== 'girls') return '';
+  return "This is a girls' class: when the teacher speaks to the whole class in Arabic, they say «يا بنات», never «يا شباب». Plural verbs keep the usual Jordanian form («لاحظوا يا بنات»). In English, say \"everyone\", never \"guys\".";
+}
+/** Safety net for AI text the teacher could say to the whole class: in a girls' class «يا شباب» becomes «يا بنات». */
+export const fixClassAddress = (text: string, s: ClassSetting) => (s.group === 'girls' ? text.replace(/يا شباب/g, 'يا بنات') : text);
+
 /** Short CLASS CONDITIONS note for the scorer: names and gender in a boys' or girls' class, plus the room size. */
 export function scorerConditions(s: ClassSetting): string {
   const parts: string[] = [];
@@ -207,6 +215,8 @@ export function scorerConditions(s: ClassSetting): string {
     const who = KID_IDS.map((k) => { const i = kidIdentity(k, s); return `${k} = ${i.name.en} / ${i.name.ar} (${i.gender === 'f' ? 'girl' : 'boy'})`; }).join('; ');
     parts.push(`The kids' ids keep their roles but have these names: ${who}. Always write the kid's name and use the right gender in Arabic (never the role id and never another name).`);
   }
+  const addr = classAddress(s);
+  if (addr) parts.push(addr);
   if (isLarge(s)) parts.push(`This class has ${s.size} students and one teacher. Make one_tip and try_saying fit a large room (for example everyone answers at once: fingers up, mini whiteboards, or "tell your neighbour, then I'll pick"). This is about the room, never about the kids.`);
   if (!parts.length) return '';
   return `\n\nCLASS CONDITIONS: ${parts.join(' ')} Do not change any score.`;

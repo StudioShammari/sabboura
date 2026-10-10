@@ -26,6 +26,10 @@ const ICONS = { reached: Users, checks: CircleHelp, lina: UserRound, yazan: Rock
 const REVEAL_ORDER: KidId[] = ['omar', 'sara', 'khaled', 'yazan', 'lina'];
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
+/** The stamp on a flipped card follows the shown kid's gender. */
+function stampWord(ok: boolean, gender: 'm' | 'f') {
+  return ok ? (gender === 'f' ? 'فهمت' : 'فهم') : (gender === 'f' ? 'ما زالت تفكّر' : 'ما زال يفكّر');
+}
 function nAr(n: number) { return n === 1 ? 'مرة وحدة' : n === 2 ? 'مرتين' : n <= 10 ? `${n} مرات` : `${n} مرة`; }
 function qAr(n: number) { return n === 1 ? 'سؤال حقيقي واحد' : n === 2 ? 'سؤالين حقيقيين' : `${n} أسئلة حقيقية`; }
 function nEn(n: number) { return n === 1 ? 'once' : n === 2 ? 'twice' : `${n} times`; }
@@ -132,11 +136,11 @@ export default function Review() {
 
   const autoReveal = useRef(new URLSearchParams(location.search).get('reveal') === '1');
   useEffect(() => {
-    if (!score || !autoReveal.current) return;
+    if (!score || !autoReveal.current || !import.meta.env.DEV) return;
     autoReveal.current = false;
     setRevealed(true);
-    if (matchMedia('(max-width: 767px)').matches) { setFlipped(new Set(KID_IDS)); return; }
-    void (async () => { await sleep(900); for (const k of REVEAL_ORDER) { setFlipped((x) => new Set(x).add(k)); sfx.flip(); await sleep(150); } })();
+    // dev only: ?reveal=1 opens the review with every card already flipped (no animation), for screenshots
+    setFlipped(new Set(KID_IDS)); document.documentElement.dataset.instantFlip = '1';
   }, [score]);
   if (missing) return <main className="review"><div className="panel"><p>{t('notFound')}</p><button className="btn btn-primary" onClick={() => nav('/')}>{t('home')}</button></div></main>;
   if (!score) return <main className="review"><div className="panel fade-in">{t('loading')}</div></main>;
@@ -200,9 +204,9 @@ export default function Review() {
             const def = kidIdentity(k, setting), tk = topic.kids[k], lv = fl[k] as Level, ok = lv === 2;
             const back = (
               <div className="back" aria-hidden={!flipped.has(k)}>
+                <div className={`reveal-stamp ${ok ? 'ok' : 'no'} ${flipped.has(k) ? 'stamp-in' : ''}`}>{L === 'ar' ? stampWord(ok, def.gender) : ok ? 'Got it' : 'Still thinking'}</div>
                 <h4>{def.name[L]}</h4>
                 <div>{kidText(k, tk.reveal, setting, L)}</div>
-                <div className={`reveal-stamp ${ok ? 'ok' : 'no'} ${flipped.has(k) ? 'stamp-in' : ''}`}>{ok ? (L === 'ar' ? 'فهم' : 'Got it') : (L === 'ar' ? 'ما زال يفكّر' : 'Still thinking')}</div>
                 {!ok && <div style={{ fontWeight: 600 }}>{L === 'ar' ? 'جرّب تسأل: ' : 'Try asking: '}{kidText(k, tk.next_check, setting, L)}</div>}
               </div>
             );

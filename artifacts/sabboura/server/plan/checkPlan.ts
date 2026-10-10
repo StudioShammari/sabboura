@@ -4,7 +4,7 @@ import type { Plan, PlanCheck, PlanKind, PlanRow } from '../../shared/plan';
 import { AIError, claudeJSON } from '../ai/clients';
 import { normalise, overlap, words } from '../lib/arabic';
 import type { TurnRec } from '../rules/score';
-import { DEFAULT_SETTING, kidIdentity, kidText, type ClassSetting } from '../../shared/setting';
+import { DEFAULT_SETTING, classAddress, fixClassAddress, kidIdentity, kidText, type ClassSetting } from '../../shared/setting';
 
 /** The checklist compares the teacher's own plan with what was said. It never touches the score. */
 
@@ -16,6 +16,9 @@ For EACH step, decide whether the teacher actually did it:
 - status: "done" if the words clearly do what the step says; "partly" if they touch it but are vague or incomplete; "not_yet" if no turn does it.
 - next_time: for "partly" or "not_yet", one sentence (at most 15 words) the teacher could say to the class next time to do this step, in the lesson language; otherwise null.
 Rules: use only the teacher's words; a step counts even if it came in a different order; quote only words that appear in the log; never judge the teacher as a person; in Arabic, write next_time in clear Modern Standard Arabic with light Jordanian warmth. Return only JSON that matches the schema.`;
+
+/** The default and boys' prompts are the plain text; a girls' class adds how to address the class. */
+export const planCheckSystemFor = (s: ClassSetting) => { const a = classAddress(s); return a ? `${PLAN_CHECK_SYSTEM}\n${a}` : PLAN_CHECK_SYSTEM; };
 
 const nullable = (t: object) => ({ anyOf: [t, { type: 'null' }] });
 export const PLAN_CHECK_JSON_SCHEMA = {
@@ -113,7 +116,7 @@ export async function checkPlanAI(inp: PlanInput, check: PlanCheck, lessonId = '
   let out: z.infer<typeof PlanCheckOut> | null = null;
   for (const timeoutMs of [20000, 15000]) {
     try {
-      out = (await claudeJSON({ purpose: 'scorer', system: PLAN_CHECK_SYSTEM, user, jsonSchema: PLAN_CHECK_JSON_SCHEMA, zod: PlanCheckOut, maxTokens: 1500, timeoutMs })).value;
+      out = (await claudeJSON({ purpose: 'scorer', system: planCheckSystemFor(setting), user, jsonSchema: PLAN_CHECK_JSON_SCHEMA, zod: PlanCheckOut, maxTokens: 1500, timeoutMs })).value;
       break;
     } catch (e: any) {
       console.warn('[plan] AI check failed', String(e?.message ?? e));
@@ -123,8 +126,9 @@ export async function checkPlanAI(inp: PlanInput, check: PlanCheck, lessonId = '
   const rows = check.rows.map((r): PlanRow => {
     if (r.status !== 'pending') return r;
     if (!out) return { ...r, status: 'unknown' };
-    const v = out.steps.find((x) => x.step === r.step);
-    if (!v) return { ...r, status: 'unknown' };
+    const found = out.steps.find((x) => x.step === r.step);
+    if (!found) return { ...r, status: 'unknown' };
+    const v = { ...found, next_time: found.next_time == null ? null : fixClassAddress(found.next_time, setting) };
     const fallbackNext = r.kind === 'explain' ? kidText('sara', topic.kids.sara.next_check, setting, lang) : r.kind === 'example' ? kidText('khaled', topic.kids.khaled.next_check, setting, lang) : null;
     if (v.status === 'not_yet') return { ...r, status: 'not_yet', next_time: v.next_time?.trim() || fallbackNext };
     // the quote must really be in a turn: the stated one first, then the others
