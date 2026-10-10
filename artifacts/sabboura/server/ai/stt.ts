@@ -26,8 +26,9 @@ export function isEmptyTranscript(text: string, prompt: string): boolean {
 export async function transcribe(args: { buf: Buffer; mime: string; lang: Lang; topicId: string }): Promise<{ transcript: string; empty: boolean }> {
   const mp4 = /mp4|aac|m4a/i.test(args.mime);
   const ogg = /ogg/i.test(args.mime);
-  const name = mp4 ? 'turn.mp4' : ogg ? 'turn.ogg' : 'turn.webm';
-  const type = mp4 ? 'audio/mp4' : ogg ? 'audio/ogg' : 'audio/webm';
+  const mp3 = /mpeg|mp3/i.test(args.mime);
+  const name = mp4 ? 'turn.mp4' : ogg ? 'turn.ogg' : mp3 ? 'turn.mp3' : 'turn.webm';
+  const type = mp4 ? 'audio/mp4' : ogg ? 'audio/ogg' : mp3 ? 'audio/mpeg' : 'audio/webm';
   const prompt = sttPrompt(args.topicId, args.lang);
   let lastErr: unknown;
   for (let attempt = 0; attempt < 2; attempt++) {

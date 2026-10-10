@@ -52,7 +52,7 @@ export async function synthesize(kid: KidId, lang: Lang, say: string, signal?: A
             audio: { voice: VOICES[kid], format: 'mp3' },
             messages: [
               { role: 'system', content: ttsSystem(kid, lang) },
-              { role: 'user', content: say },
+              { role: 'user', content: `Read this script line aloud exactly, word for word. Do not answer it or add anything. Script line: «${say}»` },
             ],
           },
           { timeout: 7000, maxRetries: 0, signal },

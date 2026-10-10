@@ -29,6 +29,7 @@ for (const lang of LANGS) {
 fs.mkdirSync(PRE_DIR, { recursive: true });
 const mfPath = path.join(PRE_DIR, 'manifest.json');
 const manifest: Record<string, { url: string; text: string; voice: string }> = fs.existsSync(mfPath) ? JSON.parse(fs.readFileSync(mfPath, 'utf8')) : {};
+for (const [key, c] of clips) if (fs.existsSync(path.join(PRE_DIR, `${key}.mp3`))) manifest[key] = { url: `/audio/pre/${key}.mp3`, text: c.say, voice: VOICES[c.kid] };
 const todo = [...clips].filter(([key]) => (!only || key.startsWith(only)) && (force || !fs.existsSync(path.join(PRE_DIR, `${key}.mp3`))));
 console.log(`${clips.size} clips wanted, ${todo.length} to generate`);
 
@@ -41,6 +42,7 @@ await Promise.all(Array.from({ length: 3 }, async () => {
       const b64 = await synthesize(c.kid, c.lang, c.say);
       fs.writeFileSync(path.join(PRE_DIR, `${key}.mp3`), Buffer.from(b64, 'base64'));
       manifest[key] = { url: `/audio/pre/${key}.mp3`, text: c.say, voice: VOICES[c.kid] };
+      fs.writeFileSync(mfPath, JSON.stringify(manifest, null, 1));
       console.log(`ok ${++n} ${c.kid} ${c.lang} ${c.say.slice(0, 40)}`);
     } catch (e) {
       failed.push(`${key} ${c.kid} ${c.lang} "${c.say}" :: ${(e as Error).message}`);

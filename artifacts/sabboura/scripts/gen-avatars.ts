@@ -29,7 +29,7 @@ async function toWebp(b64: string, file: string, size?: number) {
 async function generate(prompt: string, size: '1024x1024' | '1536x1024') {
   for (const m of [model, 'gpt-image-1']) {
     try {
-      const r = await withOpenAI((c) => c.images.generate({ model: m, prompt, size, n: 1 } as any));
+      const r = await withOpenAI((c) => c.images.generate({ model: m, prompt, size, n: 1 } as any, { timeout: 240000 }));
       const b64 = r.data?.[0]?.b64_json;
       if (b64) return b64;
     } catch (e) { console.warn(`  ${m} failed: ${(e as Error).message}`); }
@@ -39,7 +39,7 @@ async function generate(prompt: string, size: '1024x1024' | '1536x1024') {
 async function edit(anchor: Buffer, prompt: string) {
   for (const m of [model, 'gpt-image-1']) {
     try {
-      const r = await withOpenAI(async (c) => c.images.edit({ model: m, image: await toFile(anchor, 'anchor.png', { type: 'image/png' }), prompt, size: '1024x1024', n: 1 } as any));
+      const r = await withOpenAI(async (c) => c.images.edit({ model: m, image: await toFile(anchor, 'anchor.png', { type: 'image/png' }), prompt, size: '1024x1024', n: 1 } as any, { timeout: 240000 }));
       const b64 = r.data?.[0]?.b64_json;
       if (b64) return b64;
     } catch (e) { console.warn(`  edit ${m} failed: ${(e as Error).message}`); }
@@ -49,7 +49,8 @@ async function edit(anchor: Buffer, prompt: string) {
 
 fs.mkdirSync(OUT, { recursive: true });
 fs.mkdirSync(path.dirname(ANCHOR), { recursive: true });
-const want = (name: string) => !only || name === only || name === 'class' && only === 'class';
+const force = process.argv.includes('--force');
+const want = (name: string) => (only ? name === only : force || !fs.existsSync(path.join(OUT, `${name}.webp`)));
 
 if (want('class')) {
   console.log('class');
@@ -61,7 +62,7 @@ const anchorB64 = fs.existsSync(ANCHOR) ? fs.readFileSync(ANCHOR, 'utf8') : null
 for (const [kid, states] of Object.entries(STATES)) {
   for (const st of states) {
     const name = `${kid}-${st}`;
-    if (!want(name) || (only && only === 'class')) continue;
+    if (!want(name)) continue;
     console.log(name);
     const expr = st === 'neutral' ? 'a calm neutral expression' : st === 'happy' ? 'a big happy smile, eyes bright' : 'a bored, half-lidded look, chin on hand';
     let b64: string | null = null;

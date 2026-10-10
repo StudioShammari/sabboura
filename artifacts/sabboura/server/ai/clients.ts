@@ -128,7 +128,7 @@ export async function claudeJSON<T>(call: ClaudeCall<T>): Promise<ClaudeResult<T
       let allowTextMode = true;
       for (;;) {
         try {
-          const system = [{ type: 'text', text: aiState.structured ? call.system : call.system + '\n\nReturn only the JSON object, no prose.', cache_control: { type: 'ephemeral' } }];
+          const system = [{ type: 'text', text: aiState.structured ? call.system : call.system + '\n\nReturn only a JSON object, no prose, matching exactly this JSON Schema (use these exact key names):\n' + JSON.stringify(call.jsonSchema), cache_control: { type: 'ephemeral' } }];
           const res: any = await (client.messages as any).create(
             {
               model,

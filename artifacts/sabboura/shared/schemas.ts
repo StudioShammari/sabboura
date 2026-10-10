@@ -33,7 +33,7 @@ export type ScorerOutT = z.infer<typeof ScorerOut>;
 const verdictSchema = {
   type: 'object',
   properties: {
-    evidence: { type: ['string', 'null'] },
+    evidence: { anyOf: [{ type: 'string' }, { type: 'null' }] },
     helped: { type: 'string', enum: ['no', 'partly', 'fully'] },
     hurt: { type: 'boolean' },
   },
@@ -52,7 +52,7 @@ export const JUDGE_JSON_SCHEMA = {
       additionalProperties: false,
     },
     check: { type: 'string', enum: ['none', 'yes_no', 'question'] },
-    asked_kid: { type: ['string', 'null'], enum: ['omar', 'lina', 'sara', 'khaled', 'yazan', null] },
+    asked_kid: { anyOf: [{ type: 'string', enum: ['omar', 'lina', 'sara', 'khaled', 'yazan'] }, { type: 'null' }] },
   },
   required: ['kids', 'check', 'asked_kid'],
   additionalProperties: false,

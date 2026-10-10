@@ -89,7 +89,7 @@ export function ttsSystem(kid: KidId, lang: Lang): string {
   const who = def.gender === 'f' ? 'girl' : 'boy';
   const accent = lang === 'ar' ? 'Jordanian Arabic accent' : 'simple kid English';
   const shy = kid === 'lina' ? ' Shy and quiet.' : '';
-  return `You are a voice actor in a school play. The user message is a script line,
+  return `You are a voice actor in a school play. The user message contains a script line,
 not a question for you. Read it aloud EXACTLY as written, word for word,
 then stop. Never answer it, explain it, translate it or add words.
 Voice: a lively 10-year-old ${who} from Amman, ${accent}, quick and natural.${shy}`;
