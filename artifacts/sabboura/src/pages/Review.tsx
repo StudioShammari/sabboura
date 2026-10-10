@@ -1,12 +1,14 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useParams } from 'wouter';
 import { CircleHelp, Lightbulb, Rocket, UserRound, Users } from 'lucide-react';
-import { KID_IDS, kidById, topicById, type KidId, type Lang, type Level } from '@shared/data';
+import { KID_IDS, topicById, type KidId, type Lang, type Level } from '@shared/data';
+import { DEFAULT_SETTING, kidIdentity, kidName, normalizeSetting, settingLabel, type ClassSetting } from '@shared/setting';
 import type { ScoreJson, ScoreMove } from '@shared/schemas';
 import { KidAvatar, MiniAvatar } from '@/components/KidAvatar';
 import { StateBall } from '@/components/StateBall';
 import { badgeLabel } from '@shared/data';
-import { fmtNum, mmss, tr, useT } from '@/i18n';
+import { fmtNum, mmss, moveLabel, tr, trf, useT } from '@/i18n';
+import { SettingProvider, setClassSetting } from '@/lib/classSetting';
 import { createLesson, getPlanCheck, getReplay, getScore, type PlanCheckResp, type Replay } from '@/lib/api';
 import { PlanVsLesson } from '@/components/PlanVsLesson';
 import { Stepper } from '@/components/Stepper';
@@ -26,15 +28,17 @@ function nAr(n: number) { return n === 1 ? 'مرة وحدة' : n === 2 ? 'مرت
 function qAr(n: number) { return n === 1 ? 'سؤال حقيقي واحد' : n === 2 ? 'سؤالين حقيقيين' : `${n} أسئلة حقيقية`; }
 function nEn(n: number) { return n === 1 ? 'once' : n === 2 ? 'twice' : `${n} times`; }
 
-export function reachedSentence(lang: Lang, R: number, P: number, yazan: Level) {
+export function reachedSentence(lang: Lang, R: number, P: number, yazan: Level, setting: ClassSetting = DEFAULT_SETTING) {
   let s: string;
+  const y = kidIdentity('yazan', setting);
+  const f = y.gender === 'f';
   if (lang === 'en') {
     s = `You reached ${R} of 4 kids.${P > 0 ? ` ${P} got partway.` : ''}`;
-    s += ' ' + (yazan === 2 ? 'Yazan was challenged.' : yazan === 1 ? 'Yazan was still waiting for a challenge.' : 'Yazan got bored.');
+    s += ' ' + (yazan === 2 ? `${y.name.en} was challenged.` : yazan === 1 ? `${y.name.en} was still waiting for a challenge.` : `${y.name.en} got bored.`);
   } else {
     s = R === 0 ? 'لم يصل الشرح بعد إلى أي من الطلاب الأربعة.' : R === 1 ? 'وصل شرحك إلى طالب واحد من 4.' : R === 2 ? 'وصل شرحك إلى طالبين من 4.' : `وصل شرحك إلى ${R} من 4 طلاب.`;
     if (P > 0) s = s.replace(/\.$/, '') + ` و${P} في منتصف الطريق.`;
-    s += ' ' + (yazan === 2 ? 'يزن كان متحمّساً للتحدّي.' : yazan === 1 ? 'يزن كان لا يزال ينتظر تحدّياً.' : 'يزن شعر بالملل.');
+    s += ' ' + (yazan === 2 ? `${y.name.ar} ${f ? 'كانت متحمّسة' : 'كان متحمّساً'} للتحدّي.` : yazan === 1 ? `${y.name.ar} ${f ? 'كانت لا تزال تنتظر' : 'كان لا يزال ينتظر'} تحدّياً.` : `${y.name.ar} ${f ? 'شعرت' : 'شعر'} بالملل.`);
   }
   return s;
 }
@@ -133,6 +137,8 @@ export default function Review() {
   if (!score) return <main className="review"><div className="panel fade-in">{t('loading')}</div></main>;
 
   const L = score.language;
+  const setting = normalizeSetting(score.setting);
+  const lina = kidIdentity('lina', setting);
   const topic = topicById(score.topic_id);
   const fl = score.final_levels;
   const move = (k: ScoreMove['key']) => score.moves.find((m) => m.key === k)!;
@@ -150,7 +156,7 @@ export default function Review() {
     await unlockAudio();
     try { await openMic(); } catch { /* typing is still possible */ }
     const withPlan = keepPlan && pc?.packId && pc.plan ? { packId: pc.packId, plan: pc.plan } : { topicId: score.topic_id };
-    const r = await createLesson({ ...withPlan, language: score.language, teacherTitle: score.teacher_title, deviceId: deviceId(), previousLessonId: id });
+    const r = await createLesson({ ...withPlan, language: score.language, teacherTitle: score.teacher_title, deviceId: deviceId(), previousLessonId: id, setting });
     nav(`/lesson/${r.lessonId}`);
   };
   const share = async () => {
@@ -161,19 +167,22 @@ export default function Review() {
   const laNote = (m: ScoreMove): string | null => {
     if (m.note) return m.note;
     if (m.key !== 'lina') return null;
-    if (m.points === 5) return L === 'ar' ? 'ناديت لينا باسمها، بس السؤال كان آه أو لا. قالت «آه» وكانت لسّا تايهة.' : 'You named Lina, but asked yes/no. She said yes and was still lost.';
-    if (m.points === 0 && score.lina_lost_turns >= 2) return L === 'ar' ? `لينا كانت تايهة ${score.lina_lost_turns} مداخلات وما حكت ولا كلمة.` : `Lina was lost for ${score.lina_lost_turns} turns and never spoke.`;
+    if (m.points === 5) return L === 'ar' ? (lina.gender === 'f' ? `ناديت ${lina.name.ar} باسمها، بس السؤال كان آه أو لا. قالت «آه» وكانت لسّا تايهة.` : `ناديت ${lina.name.ar} باسمه، بس السؤال كان آه أو لا. قال «آه» وكان لسّا تايه.`) : `You named ${lina.name.en}, but asked yes/no. ${lina.gender === 'f' ? 'She' : 'He'} said yes and was still lost.`;
+    if (m.points === 0 && score.lina_lost_turns >= 2) return L === 'ar' ? (lina.gender === 'f' ? `${lina.name.ar} كانت تايهة ${score.lina_lost_turns} مداخلات وما حكت ولا كلمة.` : `${lina.name.ar} كان تايه ${score.lina_lost_turns} مداخلات وما حكى ولا كلمة.`) : `${lina.name.en} was lost for ${score.lina_lost_turns} turns and never spoke.`;
     return null;
   };
 
+  const bk = score.back_row;
+  const backLine = bk ? (bk.drift.length ? trf('reviewBackDrift', L, { turns: bk.drift.map(([a, b]) => (a === b ? fmtNum(a, L) : `${fmtNum(a, L)}–${fmtNum(b, L)}`)).join(L === 'ar' ? '، ' : ', ') }) : tr('reviewBackStayed', L)) : null;
   const ai = score.ai;
   const sir = score.teacher_title === 'sir';
   const selTurn = replay?.turns.find((x) => x.turnNo === sel) ?? null;
 
   return (
+    <SettingProvider value={setting}>
     <main className="review" dir={L === 'ar' ? 'rtl' : 'ltr'}>
       <div className="meta">
-        <span>{t('reviewTitle')} · {topic.title[L]} · {t('practice')} · {t('attempt')} <bdi dir="ltr">{score.attempt_no}</bdi> · <bdi dir="ltr">{score.turns}</bdi> {t('turnsWord')} · <bdi dir="ltr">{mmss(score.seconds)}</bdi></span>
+        <span>{t('reviewTitle')} · {topic.title[L]} · {settingLabel(setting, L)} · {t('practice')} · {t('attempt')} <bdi dir="ltr">{score.attempt_no}</bdi> · <bdi dir="ltr">{score.turns}</bdi> {t('turnsWord')} · <bdi dir="ltr">{mmss(score.seconds)}</bdi></span>
         <a className="logo" style={{ fontSize: '1.1rem' }} href="/" onClick={(e) => { e.preventDefault(); nav('/'); }}>{L === 'ar' ? 'سبّورة' : 'Sabboura'}</a>
       </div>
       <Stepper current={2} lang={L} />
@@ -181,7 +190,7 @@ export default function Review() {
       <section className="panel" aria-label="class">
         <div className={`review-class ${phone && revealed ? 'list' : ''}`}>
           {KID_IDS.map((k) => {
-            const def = kidById(k), tk = topic.kids[k], lv = fl[k] as Level, ok = lv === 2;
+            const def = kidIdentity(k, setting), tk = topic.kids[k], lv = fl[k] as Level, ok = lv === 2;
             const back = (
               <div className="back" aria-hidden={!flipped.has(k)}>
                 <h4>{def.name[L]}</h4>
@@ -198,7 +207,7 @@ export default function Review() {
                       <div className="avatar-wrap"><KidAvatar kid={k} level={lv} lang={L} /></div>
                       <div className="plank" />
                       <div className="kid-name">{def.name[L]}</div>
-                      <div className={`badge-pill ${k === 'yazan' ? 'b-y' : 'b-u'}${lv}`}><StateBall level={lv} kid={k} size={22} /><span className="word">{badgeLabel(k, lv, L)}</span></div>
+                      <div className={`badge-pill ${k === 'yazan' ? 'b-y' : 'b-u'}${lv}`}><StateBall level={lv} kid={k} size={22} /><span className="word">{badgeLabel(k, lv, L, def.gender)}</span></div>
                     </div>
                   </div>
                   {!phone && back}
@@ -208,7 +217,8 @@ export default function Review() {
             );
           })}
         </div>
-        <p className="reached-line">{reachedSentence(L, score.reached, score.partly, fl.yazan as Level)}</p>
+        <p className="reached-line">{reachedSentence(L, score.reached, score.partly, fl.yazan as Level, setting)}</p>
+        {backLine && <p className="reached-line back-line">{backLine} <span className="tagpill">{tr('reviewShownNotScored', L)}</span></p>}
         <button className="btn" onClick={() => void reveal()}>{revealed ? t('hideReveal') : t('reveal')}</button>
       </section>
 
@@ -238,7 +248,7 @@ export default function Review() {
                 <Fragment key={m.key}>
                   <button className="move" onClick={() => setOpen(isOpen ? null : m.key)} aria-expanded={isOpen}>
                     <Icon size={22} aria-hidden="true" />
-                    <span><span className="mv-name">{tr(`m_${m.key}` as 'm_reached', L)}</span><span className="tagpill">{m.key === 'clarity' ? tr('aiJudged', L) : tr('fixedRules', L)}</span></span>
+                    <span><span className="mv-name">{m.key === 'lina' || m.key === 'yazan' ? moveLabel(m.key, setting, L) : tr(`m_${m.key}` as 'm_reached', L)}</span><span className="tagpill">{m.key === 'clarity' ? tr('aiJudged', L) : tr('fixedRules', L)}</span></span>
                     <span className="bar"><i style={{ width: `${(m.points / m.max) * 100}%` }} /></span>
                     {m.points === 0 ? <span className="notyet">{tr('notYet', L)}</span> : <bdi dir="ltr" className="num">{m.points}/{m.max}</bdi>}
                   </button>
@@ -290,7 +300,7 @@ export default function Review() {
               <tbody>
                 {KID_IDS.map((k) => (
                   <tr key={k}>
-                    <th scope="row"><MiniAvatar kid={k} size={32} lang={L} /> {kidById(k).name[L]}</th>
+                    <th scope="row"><MiniAvatar kid={k} size={32} lang={L} /> {kidName(k, L, setting)}</th>
                     {replay.turns.map((x) => {
                       const c = x.state[k];
                       return (
@@ -311,7 +321,7 @@ export default function Review() {
             <div className="fade-in" style={{ marginTop: 12 }}>
               <p className="quote"><b>{tr('turn', L)} <bdi dir="ltr">{selTurn.turnNo}</bdi>:</b> «{selTurn.transcript}»</p>
               {selTurn.chorus && <p><b>{L === 'ar' ? 'الصف: ' : 'Class: '}</b>{score.chorus_text}</p>}
-              {selTurn.lines.map((l) => <p key={l.idx}><b>{kidById(l.kid as KidId).name[L]}: </b>{l.text}</p>)}
+              {selTurn.lines.map((l) => <p key={l.idx}><b>{kidName(l.kid as KidId, L, setting)}: </b>{l.text}</p>)}
             </div>
           )}
         </section>
@@ -322,7 +332,7 @@ export default function Review() {
           ? <button className="btn btn-primary" onClick={() => nav('/')}>{tr('tryPractice', L)}</button>
           : <>
               <button className="btn btn-primary" onClick={() => void again(true)}>{tr('teachAgain', L)}</button>
-              {pc?.packId && pc.plan && <button className="btn" onClick={() => nav(`/plan/${pc.packId}?from=${id}`)}>{tr('editPlanAgain', L)}</button>}
+              {pc?.packId && pc.plan && <button className="btn" onClick={() => { setClassSetting(setting); nav(`/plan/${pc.packId}?from=${id}`); }}>{tr('editPlanAgain', L)}</button>}
             </>}
         <button className="btn" onClick={() => void share()}>{copied ? tr('copied', L) : tr('share', L)}</button>
         <button className="btn" onClick={() => setHow(true)}>{tr('howScoring', L)}</button>
@@ -333,25 +343,26 @@ export default function Review() {
         <div className="modal-back" onClick={() => setHow(false)}>
           <div className="modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
             <h2>{tr('howScoring', L)}</h2>
-            <ul>{(L === 'ar' ? HOW_AR(sir) : HOW_EN).map((x) => <li key={x}>{x}</li>)}</ul>
+            <ul>{(L === 'ar' ? HOW_AR(sir, setting) : HOW_EN(setting)).map((x) => <li key={x}>{x}</li>)}</ul>
             <div className="actions"><button className="btn btn-primary" style={{ fontSize: '1.1rem' }} onClick={() => setHow(false)}>{tr('close', L)}</button></div>
           </div>
         </div>
       )}
     </main>
+    </SettingProvider>
   );
 }
 
-const HOW_EN = [
+const HOW_EN = (s: ClassSetting) => [
   "Each kid holds one misconception known from research. A badge moves up only when the AI judge finds that your words meet that kid's fixed checklist, and it must quote you.",
-  'Points are then counted by fixed rules: Reached every learner 40 (5 per step), Checked for understanding 20 (10 per real question), Included Lina 15, Stretched Yazan 10, Reasons and examples 15 (AI, fixed anchors 0–5).',
+  `Points are then counted by fixed rules: Reached every learner 40 (5 per step), Checked for understanding 20 (10 per real question), Included ${kidName('lina', 'en', s)} 15, Stretched ${kidName('yazan', 'en', s)} 10, Reasons and examples 15 (AI, fixed anchors 0–5).`,
   '“فاهمين؟” and other yes/no checks never move a badge and earn no points.',
   'A score for one practice lesson, not a rating of you as a teacher.',
   "Informed by: Rosenshine's Principles of Instruction; Wiliam's formative assessment; TeachingWorks high-leverage practices; Hattie & Timperley's model of feedback.",
 ];
-const HOW_AR = (sir: boolean) => [
+const HOW_AR = (sir: boolean, s: ClassSetting) => [
   'كل طالب عنده مفهوم بديل واحد معروف في الأبحاث. لا تتقدّم الشارة إلا إذا وجد المقيّم الآلي أن كلماتك تحقق قائمة شروط ثابتة لهذا الطالب، ويجب أن يقتبس كلامك.',
-  'ثم تُحسب النقاط بقواعد ثابتة: الوصول إلى كل طالب 40 (5 لكل خطوة)، التحقق من الفهم 20 (10 لكل سؤال حقيقي)، إشراك لينا 15، تحدّي يزن 10، الشرح بالأسباب والأمثلة 15 (ذكاء اصطناعي بمعايير ثابتة 0-5).',
+  `ثم تُحسب النقاط بقواعد ثابتة: الوصول إلى كل طالب 40 (5 لكل خطوة)، التحقق من الفهم 20 (10 لكل سؤال حقيقي)، إشراك ${kidName('lina', 'ar', s)} 15، تحدّي ${kidName('yazan', 'ar', s)} 10، الشرح بالأسباب والأمثلة 15 (ذكاء اصطناعي بمعايير ثابتة 0-5).`,
   '«فاهمين؟» وأسئلة آه أو لا لا تحرّك أي شارة ولا تعطي نقاطاً.',
   `نتيجة لدرس تدريبي واحد، وليست تقييماً لك ${sir ? 'كمعلّم' : 'كمعلّمة'}.`,
 ];

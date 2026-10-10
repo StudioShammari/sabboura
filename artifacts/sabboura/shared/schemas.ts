@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { KidId, Level, Levels } from './data';
+import type { ClassSetting } from './setting';
 
 export const KidIdSchema = z.enum(['omar', 'lina', 'sara', 'khaled', 'yazan']);
 
@@ -116,6 +117,8 @@ export interface StateEvent {
   linaPulse: boolean;
   speakers: Speaker[];
   judge: { model: string | null; attempts: number; ok: boolean; ms: number };
+  /** Large classes only: the "Back of the class" level (0-3) after this turn. Shown, never scored. */
+  backRow?: number;
 }
 export interface LineEvent { idx: number; kid: KidId; reason: SpeakReason; text: string; text_en: string; source: 'starter' | 'ai' | 'canned' | 'failsafe' }
 export interface AudioEvent { idx: number; kid: KidId; mime: string; url?: string; b64?: string; source: 'pre' | 'cache' | 'tts'; ms: number }
@@ -160,5 +163,9 @@ export interface ScoreJson {
   attempt_no: number;
   ai: null | { clarity: number; clarity_reason: string; why_it_worked: string; one_tip: string; try_saying: string; fallback: boolean };
   lost_kids_at_last_yes_no: KidId[];
+  /** The class conditions this lesson was taught in. Missing on older lessons (= the default). */
+  setting?: ClassSetting;
+  /** Large classes only, shown and never scored: the level after each turn and the turn ranges where it was 2 or more. */
+  back_row?: { levels: number[]; drift: [number, number][] } | null;
 }
 export type { KidId };

@@ -16,6 +16,7 @@ import { dropState, getState, putState } from '../turn/state';
 import { since, withTimeout } from '../lib/timing';
 import { cleanPlan, defaultPlan, PLAN_KINDS, type Plan, type PlanCheck } from '../../shared/plan';
 import { checkPlanAI, checkPlanCode } from '../plan/checkPlan';
+import { backRowDriftTurns, backRowLevels, isLarge, normalizeSetting, swapFromDefault, type ClassSetting } from '../../shared/setting';
 
 export const lessonsRouter = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 12 * 1024 * 1024 } });
@@ -33,6 +34,7 @@ const CreateBody = z.object({
   teacherTitle: z.enum(['miss', 'sir']),
   deviceId: z.string().max(80).optional(),
   previousLessonId: z.string().uuid().optional(),
+  setting: z.unknown().optional(),
 });
 
 lessonsRouter.post('/lessons', async (req, res) => {
@@ -53,7 +55,10 @@ lessonsRouter.post('/lessons', async (req, res) => {
   const topicId = topics.some((t) => t.id === wanted) ? wanted : topics[0].id;
   const packId = b.packId ?? `lib-${topicId}`;
   const given = b.plan ? cleanPlan(b.plan) : null;
-  const plan: Plan = given && given.steps.length ? given : packPlan ?? defaultPlan(topicId, b.language);
+  const setting = normalizeSetting(b.setting);
+  const base: Plan = given && given.steps.length ? given : packPlan ?? defaultPlan(topicId, b.language, setting);
+  // plan text written for the default class names the default kids: show this class's names instead
+  const plan: Plan = { goal: swapFromDefault(base.goal, setting), steps: base.steps.map((s) => ({ ...s, text: swapFromDefault(s.text, setting) })) };
   let attemptNo = 1;
   if (b.previousLessonId) {
     const [prev] = await db.select().from(lessons).where(eq(lessons.id, b.previousLessonId)).limit(1);
@@ -61,12 +66,12 @@ lessonsRouter.post('/lessons', async (req, res) => {
   }
   const [l] = await db.insert(lessons).values({
     topicId, language: b.language, teacherTitle: b.teacherTitle, deviceId: b.deviceId ?? null,
-    attemptNo, previousLessonId: b.previousLessonId ?? null, packId, planJson: plan, topicJson,
+    attemptNo, previousLessonId: b.previousLessonId ?? null, packId, planJson: plan, topicJson, settingJson: setting,
   }).returning();
   const levels = startLevels(topicId);
   putState({
     id: l.id, topicId, language: b.language, title: b.teacherTitle, attemptNo, levels, turnNo: 0, last3: [],
-    busy: false, startersUsed: new Set(), linaAsked: false, lastTranscript: '', pendingQuestion: null, askedQuestions: [], taught: false, kidSaid: [], startedAt: Date.now(),
+    busy: false, startersUsed: new Set(), linaAsked: false, lastTranscript: '', pendingQuestion: null, askedQuestions: [], taught: false, kidSaid: [], startedAt: Date.now(), setting, hist: [],
   });
   res.status(201).json({ lessonId: l.id, turnNo: 0, levels });
 });
@@ -78,10 +83,11 @@ lessonsRouter.get('/lessons/:id', async (req, res) => {
   const ts = await db.select().from(turns).where(eq(turns.lessonId, s.id)).orderBy(asc(turns.turnNo));
   const ls = await db.select().from(kidLines).where(eq(kidLines.lessonId, s.id)).orderBy(asc(kidLines.turnNo), asc(kidLines.idx));
   res.json({
-    lesson: { id: lesson.id, topicId: lesson.topicId, language: lesson.language, teacherTitle: lesson.teacherTitle, attemptNo: lesson.attemptNo, ended: !!lesson.endedAt, packId: lesson.packId, plan: (lesson.planJson as Plan | null) ?? null },
+    lesson: { id: lesson.id, topicId: lesson.topicId, language: lesson.language, teacherTitle: lesson.teacherTitle, attemptNo: lesson.attemptNo, ended: !!lesson.endedAt, packId: lesson.packId, plan: (lesson.planJson as Plan | null) ?? null, setting: s.setting },
     topic: uploadedTopic(lesson.topicId),
     turnNo: s.turnNo,
     levels: s.levels,
+    backRow: isLarge(s.setting) ? backRowLevels(s.hist).at(-1) ?? 0 : null,
     turns: ts.map((t) => ({
       turnNo: t.turnNo, transcript: t.transcript, checkType: t.checkType, chorus: t.chorus, levelsAfter: t.levelsAfter,
       lines: ls.filter((l) => l.turnNo === t.turnNo).map((l) => ({ kid: l.kidId, text: l.text })),
@@ -97,7 +103,7 @@ lessonsRouter.post('/lessons/:id/transcribe', upload.single('audio'), async (req
   const durationMs = Number(req.body?.durationMs ?? 0);
   if (!f || f.size < 200) return void res.json({ transcript: '', empty: true, seconds: 0, sttMs: 0 });
   try {
-    const r = await transcribe({ buf: f.buffer, mime: String(req.body?.mime || f.mimetype || 'audio/webm'), lang: s.language, topicId: s.topicId });
+    const r = await transcribe({ buf: f.buffer, mime: String(req.body?.mime || f.mimetype || 'audio/webm'), lang: s.language, topicId: s.topicId, setting: s.setting });
     res.json({ transcript: r.transcript, empty: r.empty, seconds: Math.round(durationMs / 100) / 10, sttMs: since(t0) });
   } catch (e: any) {
     console.warn('[stt] failed', e.message);
@@ -199,17 +205,20 @@ async function buildScore(lessonId: string, force: boolean): Promise<ScoreJson |
   if (!l) return null;
   if (l.scoreJson && !force) return l.scoreJson as ScoreJson;
   const { recs, start } = await turnRecs(lessonId);
+  const setting = normalizeSetting(l.settingJson);
   let score = computeScore({
     turns: recs, startLevels: start, topicId: l.topicId, language: l.language as Lang, title: l.teacherTitle as Title,
     seconds: Math.round(recs.reduce((a, t) => a + t.teacherSeconds, 0)), attemptNo: l.attemptNo,
   });
   let ai;
   try {
-    ai = await withTimeout(scoreWithAI({ score, turns: recs }), 25000, 'scorer timeout');
+    ai = await withTimeout(scoreWithAI({ score, turns: recs, setting }), 25000, 'scorer timeout');
   } catch {
-    ai = fallbackFeedback(score, score.language);
+    ai = fallbackFeedback(score, score.language, setting);
   }
-  score = withClarity({ ...score, ai }, ai.clarity);
+  const levels = backRowLevels(recs.map((t) => ({ seconds: t.teacherSeconds, check: t.check, askedKid: t.askedKid })));
+  const backRow = isLarge(setting) ? { levels, drift: backRowDriftTurns(levels) } : null;
+  score = withClarity({ ...score, ai, setting, back_row: backRow }, ai.clarity);
   await db.update(lessons).set({ scoreJson: score, endedAt: new Date() }).where(eq(lessons.id, lessonId));
   return score;
 }
@@ -227,7 +236,7 @@ async function startPlanCheck(lessonId: string): Promise<void> {
       const [l] = await db.select().from(lessons).where(eq(lessons.id, lessonId)).limit(1);
       if (!l?.planJson) return;
       const { recs } = await turnRecs(lessonId);
-      const inp = { language: l.language as Lang, topicId: l.topicId, plan: l.planJson as Plan, turns: recs };
+      const inp = { language: l.language as Lang, topicId: l.topicId, plan: l.planJson as Plan, turns: recs, setting: normalizeSetting(l.settingJson) };
       const code = checkPlanCode(inp);
       await db.update(lessons).set({ planCheckJson: code }).where(eq(lessons.id, lessonId));
       release();
@@ -255,7 +264,7 @@ lessonsRouter.get('/lessons/:id/plan-check', async (req, res) => {
     await startPlanCheck(id);
     [l] = await db.select().from(lessons).where(eq(lessons.id, id)).limit(1);
   }
-  res.json({ packId: l.packId, plan: l.planJson ?? null, check: (l.planCheckJson as PlanCheck | null) ?? null });
+  res.json({ packId: l.packId, setting: normalizeSetting(l.settingJson), plan: l.planJson ?? null, check: (l.planCheckJson as PlanCheck | null) ?? null });
 });
 
 lessonsRouter.post('/lessons/:id/end', async (req, res) => {
@@ -278,7 +287,7 @@ lessonsRouter.get('/lessons/:id/replay', async (req, res) => {
   const lv = await db.select().from(kidLevels).where(eq(kidLevels.lessonId, s.id));
   const ln = await db.select().from(kidLines).where(eq(kidLines.lessonId, s.id)).orderBy(asc(kidLines.turnNo), asc(kidLines.idx));
   res.json({
-    language: s.language, title: s.title, topicId: s.topicId, topic: uploadedTopic(s.topicId),
+    language: s.language, title: s.title, topicId: s.topicId, topic: uploadedTopic(s.topicId), setting: s.setting,
     turns: ts.map((t) => ({
       turnNo: t.turnNo, transcript: t.transcript, chorus: t.chorus, checkType: t.checkType, askedKid: t.askedKid,
       state: Object.fromEntries(KID_IDS.map((k) => {
@@ -287,7 +296,7 @@ lessonsRouter.get('/lessons/:id/replay', async (req, res) => {
       })),
       lines: ln.filter((l) => l.turnNo === t.turnNo).map((l) => ({
         idx: l.idx, kid: l.kidId, text: l.text, text_en: l.textEn ?? l.text,
-        audioUrl: `/api/tts?kid=${l.kidId}&lang=${s.language}&text=${encodeURIComponent(l.say ?? l.text)}`,
+        audioUrl: `/api/tts?kid=${l.kidId}&lang=${s.language}&group=${s.setting.group}&text=${encodeURIComponent(l.say ?? l.text)}`,
       })),
     })),
   });

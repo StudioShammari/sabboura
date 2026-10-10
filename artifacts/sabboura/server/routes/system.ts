@@ -9,6 +9,7 @@ import { generateLines } from '../ai/kidLines';
 import { judgeTurn } from '../ai/judge';
 import { startLevels, KID_IDS, type KidId, type Lang } from '../../shared/data';
 import { since } from '../lib/timing';
+import type { Group } from '../../shared/setting';
 
 export const systemRouter = Router();
 
@@ -48,10 +49,10 @@ systemRouter.get('/warmup', async (req, res) => {
   res.json(body);
 });
 
-const TtsBody = z.object({ kid: z.enum(KID_IDS), text: z.string().min(1).max(300), lang: z.enum(['ar', 'en']).default('ar') });
+const TtsBody = z.object({ kid: z.enum(KID_IDS), text: z.string().min(1).max(300), lang: z.enum(['ar', 'en']).default('ar'), group: z.enum(['mixed', 'boys', 'girls']).default('mixed') });
 
-async function serveTts(kid: KidId, lang: Lang, text: string, res: import('express').Response) {
-  const r = await speak(kid, lang, text);
+async function serveTts(kid: KidId, lang: Lang, text: string, res: import('express').Response, group: Group = 'mixed') {
+  const r = await speak(kid, lang, text, undefined, group);
   if (!r.ok) return void res.status(204).end();
   if (r.source === 'pre') return void res.redirect(302, r.url);
   res.setHeader('Content-Type', r.mime);
@@ -61,10 +62,10 @@ async function serveTts(kid: KidId, lang: Lang, text: string, res: import('expre
 systemRouter.post('/tts', async (req, res) => {
   const p = TtsBody.safeParse(req.body);
   if (!p.success) return void res.status(400).json({ error: 'bad request' });
-  await serveTts(p.data.kid, p.data.lang, p.data.text, res);
+  await serveTts(p.data.kid, p.data.lang, p.data.text, res, p.data.group);
 });
 systemRouter.get('/tts', async (req, res) => {
-  const p = TtsBody.safeParse({ kid: req.query.kid, text: req.query.text, lang: req.query.lang ?? 'ar' });
+  const p = TtsBody.safeParse({ kid: req.query.kid, text: req.query.text, lang: req.query.lang ?? 'ar', group: req.query.group ?? 'mixed' });
   if (!p.success) return void res.status(400).json({ error: 'bad request' });
-  await serveTts(p.data.kid, p.data.lang, p.data.text, res);
+  await serveTts(p.data.kid, p.data.lang, p.data.text, res, p.data.group);
 });

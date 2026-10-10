@@ -16,6 +16,8 @@ export const lessons = pgTable('lessons', {
   topicJson: jsonb('topic_json'),
   planJson: jsonb('plan_json'),
   planCheckJson: jsonb('plan_check_json'),
+  /** The class conditions (nullable: older lessons and the default setting). */
+  settingJson: jsonb('setting_json'),
 });
 
 export const turns = pgTable(

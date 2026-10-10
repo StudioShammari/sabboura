@@ -2,6 +2,7 @@ import { registerTopic, type Lang, type Levels, type Title, type TopicDef } from
 import type { PackStatus } from '@shared/pack';
 import type { ScoreJson } from '@shared/schemas';
 import type { Plan, PlanCheck } from '@shared/plan';
+import type { ClassSetting } from '@shared/setting';
 
 async function json<T>(res: Response): Promise<T> {
   const ct = res.headers.get('content-type') ?? '';
@@ -12,12 +13,14 @@ const post = (url: string, body?: unknown, signal?: AbortSignal) =>
   fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body), signal });
 
 export interface CreatedLesson { lessonId: string; turnNo: number; levels: Levels }
-export const createLesson = (b: { topicId?: string; packId?: string; plan?: Plan; language: Lang; teacherTitle: Title; deviceId?: string; previousLessonId?: string }) =>
+export const createLesson = (b: { topicId?: string; packId?: string; plan?: Plan; language: Lang; teacherTitle: Title; deviceId?: string; previousLessonId?: string; setting?: ClassSetting }) =>
   post('/api/lessons', b).then((r) => json<CreatedLesson>(r));
 
 export interface LessonInfo {
-  lesson: { id: string; topicId: string; language: Lang; teacherTitle: Title; attemptNo: number; ended: boolean; packId: string | null; plan: Plan | null };
+  lesson: { id: string; topicId: string; language: Lang; teacherTitle: Title; attemptNo: number; ended: boolean; packId: string | null; plan: Plan | null; setting?: ClassSetting };
   turnNo: number;
+  /** Large classes: the Back of the class level now (0-3). */
+  backRow?: number | null;
   levels: Levels;
   topic: TopicDef | null;
   turns: { turnNo: number; transcript: string; checkType: string; chorus: boolean; levelsAfter: Levels; lines: { kid: string; text: string }[] }[];
@@ -46,10 +49,10 @@ export interface ReplayTurn {
   state: Record<string, { to: 0 | 1 | 2; change: number; evidence: string | null }>;
   lines: { idx: number; kid: string; text: string; text_en: string; audioUrl: string }[];
 }
-export interface Replay { language: Lang; title: Title; topicId: string; topic?: TopicDef | null; turns: ReplayTurn[] }
+export interface Replay { setting?: ClassSetting; language: Lang; title: Title; topicId: string; topic?: TopicDef | null; turns: ReplayTurn[] }
 export const getReplay = (id: string) => fetch(`/api/lessons/${id}/replay`).then((r) => json<Replay>(r)).then(withTopic);
 
-export interface PlanCheckResp { packId: string | null; plan: Plan | null; check: PlanCheck | null }
+export interface PlanCheckResp { setting?: ClassSetting; packId: string | null; plan: Plan | null; check: PlanCheck | null }
 export const getPlanCheck = (id: string) => fetch(`/api/lessons/${id}/plan-check`).then((r) => json<PlanCheckResp>(r));
 
 export const getPack = (id: string) => fetch(`/api/packs/${id}`).then((r) => json<PackStatus>(r));

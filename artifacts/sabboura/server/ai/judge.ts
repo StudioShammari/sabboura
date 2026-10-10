@@ -1,5 +1,6 @@
 import { JUDGE_JSON_SCHEMA, JudgeOut, type JudgeOutT } from '../../shared/schemas';
 import { KID_IDS, type KidId, type Levels } from '../../shared/data';
+import { DEFAULT_SETTING, type ClassSetting } from '../../shared/setting';
 import { AIError, claudeJSON } from './clients';
 import { judgeSystemFor, judgeUser } from './prompts';
 import { overlap, truncateWords } from '../lib/arabic';
@@ -24,9 +25,10 @@ export async function judgeTurn(args: {
   signal?: AbortSignal;
   budgetLeftMs?: () => number;
   model?: string;
+  setting?: ClassSetting;
 }): Promise<JudgeResult> {
   const t0 = performance.now();
-  const system = judgeSystemFor(args.topicId);
+  const system = judgeSystemFor(args.topicId, args.setting ?? DEFAULT_SETTING);
   const user = judgeUser({ levels: args.levels, latest: args.transcript, previous: args.previous });
   let attempts = 0;
   let lastErr = '';

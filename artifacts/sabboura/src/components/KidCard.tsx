@@ -1,9 +1,11 @@
 import { Hand, AudioLines } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { badgeLabel, kidById, type KidId, type Lang, type Level } from '@shared/data';
+import { badgeLabel, type KidId, type Lang, type Level } from '@shared/data';
+import { kidIdentity } from '@shared/setting';
+import { useSetting } from '@/lib/classSetting';
 import { KidAvatar } from './KidAvatar';
 import { StateBall } from './StateBall';
-import { tr } from '@/i18n';
+import { linaUnheardText, tr } from '@/i18n';
 
 export interface CardView {
   speaking?: boolean; thinking?: boolean; hand?: boolean; raised?: boolean; asked?: boolean; unheard?: boolean; unheardPulse?: boolean;
@@ -16,7 +18,8 @@ export const signed = (n: number) => (n > 0 ? `+${n}` : `\u2212${Math.abs(n)}`);
 export function KidCard({ kid, level, lang, view, onBadge, onCallOn, popover, name }: {
   kid: KidId; level: Level; lang: Lang; view: CardView; onBadge?: () => void; onCallOn?: () => void; popover?: ReactNode; name?: string;
 }) {
-  const def = kidById(kid);
+  const setting = useSetting();
+  const def = kidIdentity(kid, setting);
   const v = view;
   const cls = ['kid', v.speaking && 'speaking', v.thinking && 'thinking', v.dim && 'dim', v.spotlight && 'spotlight', level === 2 && kid !== 'yazan' && 'gotit', v.glow && 'glow',
     v.unheard && 'unheard', v.unheardPulse && 'pulse', v.shake && 'shake', v.hop && 'hop', v.raised && 'raised'].filter(Boolean).join(' ');
@@ -30,7 +33,7 @@ export function KidCard({ kid, level, lang, view, onBadge, onCallOn, popover, na
           <button type="button" className="call-on" onClick={onCallOn} aria-label={`${tr('callOn', lang)} ${name ?? def.name[lang]}`} title={`${tr('callOn', lang)} ${name ?? def.name[lang]}`} />
         )}
         {(v.hand || v.raised) && <span className={`hand-chip ${v.raised ? 'up' : ''}`} style={v.hopDelay ? { animationDelay: `${v.hopDelay}ms` } : undefined}><Hand size={26} strokeWidth={2.5} /></span>}
-        {v.q && <span className={`q-chip ${v.q === 'blue' ? 'blue' : ''}`} title={v.q === 'blue' ? tr('linaUnheard', lang) : undefined}>{lang === 'ar' ? '؟' : '?'}</span>}
+        {v.q && <span className={`q-chip ${v.q === 'blue' ? 'blue' : ''}`} title={v.q === 'blue' ? linaUnheardText(setting, lang) : undefined}>{lang === 'ar' ? '؟' : '?'}</span>}
       </div>
       <div className="plank" />
       <div className="kid-name">
@@ -38,9 +41,9 @@ export function KidCard({ kid, level, lang, view, onBadge, onCallOn, popover, na
         {name ?? def.name[lang]}
         {v.speaking && <AudioLines size={22} strokeWidth={2.5} aria-hidden="true" />}
       </div>
-      <button type="button" className={`badge-pill ${pill}`} onClick={onBadge} aria-label={`${def.name[lang]}: ${badgeLabel(kid, level, lang)}`}>
+      <button type="button" className={`badge-pill ${pill}`} onClick={onBadge} aria-label={`${def.name[lang]}: ${badgeLabel(kid, level, lang, def.gender)}`}>
         <StateBall level={level} kid={kid} size={26} />
-        <span className="word">{badgeLabel(kid, level, lang)}</span>
+        <span className="word">{badgeLabel(kid, level, lang, def.gender)}</span>
         {v.delta && <span className="delta" key={v.delta.key}><bdi dir="ltr">{signed(v.delta.n)}</bdi></span>}
       </button>
       {popover}

@@ -1,5 +1,6 @@
 import { and, eq } from 'drizzle-orm';
-import { KID_IDS, kidById, type KidId } from '../../shared/data';
+import { KID_IDS, type KidId } from '../../shared/data';
+import { backRowLevels, isLarge, kidName } from '../../shared/setting';
 import type { AudioEvent, CheckType, LineEvent, SpeakReason, StateEvent, Speaker, TimingsEvent, TurnEvent } from '../../shared/schemas';
 import { judgeTurn } from '../ai/judge';
 import { failsafeLine, generateLines, type OutLine } from '../ai/kidLines';
@@ -40,9 +41,9 @@ export async function* runTurn(ctx: TurnCtx): AsyncGenerator<TurnEvent> {
     const j = await judgeTurn({
       topicId: state.topicId, levels: state.levels, transcript,
       previous: state.pendingQuestion
-        ? [...state.last3, { turnNo: state.turnNo, transcript: `[${kidById(state.pendingQuestion.kid).name.en} raised a hand and asked the teacher: "${state.pendingQuestion.text}"]` }]
+        ? [...state.last3, { turnNo: state.turnNo, transcript: `[${kidName(state.pendingQuestion.kid, 'en', state.setting)} raised a hand and asked the teacher: "${state.pendingQuestion.text}"]` }]
         : state.last3,
-      signal: ctx.signal, budgetLeftMs: budgetLeft,
+      signal: ctx.signal, budgetLeftMs: budgetLeft, setting: state.setting,
     });
 
     // 3. rules
@@ -64,7 +65,10 @@ export async function* runTurn(ctx: TurnCtx): AsyncGenerator<TurnEvent> {
     const linaAskedNow = state.linaAsked || askedKid === 'lina';
     const rulesMs = since(tr0);
 
+    const thisTurn = { seconds: ctx.teacherSeconds || 0, check: check as string, askedKid };
+    const backRow = isLarge(state.setting) ? backRowLevels([...state.hist, thisTurn]).at(-1) ?? 0 : undefined;
     const stateEv: StateEvent = {
+      ...(backRow === undefined ? {} : { backRow }),
       turnNo, levels: changes, check, askedKid, chorus,
       linaPulse: linaUnheard(turnNo, levels, linaAskedNow),
       speakers,
@@ -109,6 +113,7 @@ export async function* runTurn(ctx: TurnCtx): AsyncGenerator<TurnEvent> {
     };
     const commitMemory = () => {
       state.levels = levels;
+      state.hist = [...state.hist, thisTurn];
       state.turnNo = turnNo;
       state.last3 = [...state.last3, { turnNo, transcript }].slice(-3);
       state.linaAsked = linaAskedNow;
@@ -142,11 +147,11 @@ export async function* runTurn(ctx: TurnCtx): AsyncGenerator<TurnEvent> {
     if (needAI.length) {
       const g = await generateLines({
         topicId: state.topicId, lang: state.language, title: state.title,
-        transcript: state.pendingQuestion ? `(answering ${kidById(state.pendingQuestion.kid).name.en}'s question "${state.pendingQuestion.text}") ${transcript}` : transcript,
+        transcript: state.pendingQuestion ? `(answering ${kidName(state.pendingQuestion.kid, 'en', state.setting)}'s question "${state.pendingQuestion.text}") ${transcript}` : transcript,
         context: { teacher: state.last3.map((t) => t.transcript), kids: state.kidSaid },
         taught: state.taught,
         signal: ctx.signal,
-        speakers: needAI.map((x) => x.s), levels,
+        speakers: needAI.map((x) => x.s), levels, setting: state.setting,
       });
       timings.models.lines = g.model;
       g.lines.forEach((l, k) => (outLines[needAI[k].i] = l));
@@ -159,7 +164,7 @@ export async function* runTurn(ctx: TurnCtx): AsyncGenerator<TurnEvent> {
       outLines.forEach((l, i) => lineRows.push({ idx: i, kid: l.kid, reason: l.reason, text: l.text, text_en: l.text_en, say: l.say, source: l.source }));
       return save();
     })();
-    const voiceP = outLines.map((l) => speak(l.kid, state.language, l.say, ctx.signal));
+    const voiceP = outLines.map((l) => speak(l.kid, state.language, l.say, ctx.signal, state.setting.group));
     for (let i = 0; i < outLines.length; i++) {
       const l = outLines[i];
       const ev: LineEvent & { turnNo: number } = { idx: i, kid: l.kid, reason: l.reason, text: l.text, text_en: l.text_en, source: l.source === 'ai' ? 'ai' : l.source, turnNo };

@@ -1,4 +1,5 @@
 import { chorusFor, kidById, expandT, canned, KID_IDS, type KidId, type Lang, type Line, type Title } from '@shared/data';
+import { identityFor, type Group } from '@shared/setting';
 
 export const VOICES: Record<KidId, string> = { omar: 'ash', lina: 'shimmer', sara: 'coral', khaled: 'echo', yazan: 'verse' };
 
@@ -53,7 +54,8 @@ export async function loadManifest() {
   } catch { /* no clips yet */ }
   manifestLoaded = true;
 }
-export const findPre = (kid: KidId, text: string): string | null => byText.get(`${VOICES[kid]}|${text}`) ?? null;
+/** A pre-recorded clip exists only where the kid's voice is the one that was recorded (so changed kids fall through to live TTS). */
+export const findPre = (kid: KidId, text: string, group: Group = 'mixed'): string | null => byText.get(`${identityFor(kid, group).voice}|${text}`) ?? null;
 
 const bufCache = new Map<string, AudioBuffer>();
 async function decode(data: ArrayBuffer): Promise<AudioBuffer> {
@@ -81,14 +83,14 @@ export async function decodeB64(b64: string): Promise<AudioBuffer | null> {
 }
 /** Fetch server TTS for a line (cache-backed). Returns null when voices are unavailable. */
 const ttsMem = new Map<string, AudioBuffer | null>();
-export async function decodeTts(kid: KidId, lang: Lang, text: string): Promise<AudioBuffer | null> {
-  const k = `${kid}|${lang}|${text}`;
+export async function decodeTts(kid: KidId, lang: Lang, text: string, group: Group = 'mixed'): Promise<AudioBuffer | null> {
+  const k = `${group}|${kid}|${lang}|${text}`;
   if (ttsMem.has(k)) return ttsMem.get(k)!;
   let buf: AudioBuffer | null = null;
   try {
     const ac = new AbortController();
     const t = setTimeout(() => ac.abort(), 5000);
-    const r = await fetch('/api/tts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kid, lang, text }), signal: ac.signal });
+    const r = await fetch('/api/tts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ kid, lang, text, ...(group !== 'mixed' ? { group } : {}) }), signal: ac.signal });
     clearTimeout(t);
     if (r.ok && r.status !== 204) buf = await decode(await r.arrayBuffer());
   } catch { /* silent */ }

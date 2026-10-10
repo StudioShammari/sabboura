@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useParams } from 'wouter';
-import { KID_IDS, kidById, registerTopic, topics, type KidId } from '@shared/data';
+import { KID_IDS, registerTopic, topics, type KidId } from '@shared/data';
+import { DEFAULT_SETTING, GROUP_LABEL, PRESETS, PRESET_IDS, SIZE_MAX, SIZE_MIN, kidName, normalizeSetting, settingLabel, swapNames, type ClassSetting, type Group } from '@shared/setting';
 import type { PackInfo } from '@shared/pack';
 import { PLAN_KINDS, MAX_STEPS, defaultPlan, defaultsFor, planTips, type Plan, type PlanKind } from '@shared/plan';
 import { KidAvatar } from '@/components/KidAvatar';
 import { Stepper } from '@/components/Stepper';
 import { StageReady, type StageResult } from '@/components/StageReady';
-import { tr, trf, useT, type Key } from '@/i18n';
+import { personaFor, tr, trf, useT, type Key } from '@/i18n';
+import { SettingProvider, getClassSetting, setClassSetting, useStoredSetting } from '@/lib/classSetting';
 import { createLesson, getPack, getPlanCheck, warmup } from '@/lib/api';
 import { lastPackInput, makePack } from '@/lib/packs';
 import { loadManifest, openMic, getMic, preloadLesson, unlockAudio } from '@/lib/audio';
@@ -14,14 +16,17 @@ import { deviceId, getSettings, lsGet, lsSet, setSettings, useSettings } from '@
 import { playChorus } from '@/lib/turnPlayer';
 
 const storeKey = (packId: string, lang: string) => `sabboura.plan.v1.${packId}.${lang}`;
-function loadPlan(packId: string, lang: string): Plan | null {
+/** A plan with the kid names of one class swapped for another's. */
+const swapPlan = (p: Plan, from: ClassSetting, to: ClassSetting): Plan => ({ goal: swapNames(p.goal, from, to), steps: p.steps.map((x) => ({ ...x, text: swapNames(x.text, from, to) })) });
+// a saved plan is kept with the default class's names, so it follows the class setting
+function loadPlan(packId: string, lang: string, setting: ClassSetting): Plan | null {
   try {
     const p = JSON.parse(lsGet(storeKey(packId, lang)) ?? 'null');
-    if (p && typeof p.goal === 'string' && Array.isArray(p.steps) && p.steps.every((s: any) => PLAN_KINDS.includes(s?.kind) && typeof s.text === 'string')) return p;
+    if (p && typeof p.goal === 'string' && Array.isArray(p.steps) && p.steps.every((s: any) => PLAN_KINDS.includes(s?.kind) && typeof s.text === 'string')) return swapPlan(p, DEFAULT_SETTING, setting);
   } catch { /* corrupt or blocked */ }
   return null;
 }
-const savePlan = (packId: string, lang: string, p: Plan) => lsSet(storeKey(packId, lang), JSON.stringify(p));
+const savePlan = (packId: string, lang: string, p: Plan, setting: ClassSetting) => lsSet(storeKey(packId, lang), JSON.stringify(swapPlan(p, setting, DEFAULT_SETTING)));
 const clearPlan = (packId: string, lang: string) => { try { localStorage.removeItem(storeKey(packId, lang)); } catch { /* ignore */ } };
 
 type Card = null | 'prompt' | 'denied' | 'none' | 'busy' | 'other';
@@ -34,6 +39,10 @@ export default function Plan() {
   const qs = useMemo(() => new URLSearchParams(location.search), []);
   const demo = qs.get('demo') === '1';
   const from = qs.get('from');
+  // the class conditions: remembered between visits; stage mode always shows the default, read-only
+  const stored = useStoredSetting();
+  const setting = demo ? DEFAULT_SETTING : stored;
+  const [panel, setPanel] = useState(false);
 
   const isLib = packId.startsWith('lib-');
   // an uploaded lesson: the pack (from the server) decides the topic, plan defaults and language
@@ -44,11 +53,11 @@ export default function Plan() {
   const topic = isLib ? topics.find((t) => t.id === topicId) : undefined;
   const planLang = isLib ? s.lang : pack?.language ?? s.lang;
   const baseFor = useCallback((l: 'ar' | 'en'): Plan => {
-    if (isLib) return defaultPlan(topicId, l);
-    return pack ? { goal: pack.plan.objective, steps: pack.plan.steps.map((x) => ({ ...x })) } : { goal: '', steps: [] };
-  }, [isLib, topicId, pack]);
+    if (isLib) return defaultPlan(topicId, l, setting);
+    return pack ? swapPlan({ goal: pack.plan.objective, steps: pack.plan.steps.map((x) => ({ ...x })) }, DEFAULT_SETTING, setting) : { goal: '', steps: [] };
+  }, [isLib, topicId, pack, setting]);
 
-  const [plan, setPlan] = useState<Plan>(() => (topic ? (demo ? null : loadPlan(packId, getSettings().lang)) ?? defaultPlan(topicId, getSettings().lang) : { goal: '', steps: [] }));
+  const [plan, setPlan] = useState<Plan>(() => (topic ? (demo ? null : loadPlan(packId, getSettings().lang, getClassSetting())) ?? defaultPlan(topicId, getSettings().lang, demo ? DEFAULT_SETTING : getClassSetting()) : { goal: '', steps: [] }));
   const [card, setCard] = useState<Card>(null);
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -76,15 +85,22 @@ export default function Plan() {
   // re-teach: open pre-filled with the plan of the lesson being reviewed
   useEffect(() => {
     if (!from) return;
-    getPlanCheck(from).then((r) => { if (r.plan) setPlan(r.plan); }).catch(() => {});
+    getPlanCheck(from).then((r) => { if (r.plan) setPlan(swapPlan(r.plan, normalizeSetting(r.setting), getClassSetting())); }).catch(() => {});
   }, [from]);
+  // a re-taught plan is not rebuilt when the class changes: swap the kid names inside it
+  const prevSetting = useRef(setting);
+  useEffect(() => {
+    const prev = prevSetting.current;
+    prevSetting.current = setting;
+    if (from && prev.group !== setting.group) setPlan((p) => swapPlan(p, prev, setting));
+  }, [setting, from]);
   // language switch (stage mode sets it after the first render)
   useEffect(() => {
     if ((isLib ? !topic : !pack) || from) return;
-    setPlan((demo ? null : loadPlan(packId, planLang)) ?? baseFor(planLang));
-  }, [planLang, packId, topic, pack, isLib, baseFor, from, demo]);
+    setPlan((demo ? null : loadPlan(packId, planLang, setting)) ?? baseFor(planLang));
+  }, [planLang, packId, topic, pack, isLib, baseFor, from, demo, setting]);
 
-  const edit = (next: Plan) => { setPlan(next); savePlan(packId, planLang, next); };
+  const edit = (next: Plan) => { setPlan(next); savePlan(packId, planLang, next, setting); };
   const setStep = (i: number, patch: Partial<{ kind: PlanKind; text: string }>) => edit({ ...plan, steps: plan.steps.map((st, j) => (j === i ? { ...st, ...patch } : st)) });
   const reset = () => { clearPlan(packId, planLang); setPlan(baseFor(planLang)); };
   const newDraft = async () => {
@@ -95,7 +111,7 @@ export default function Plan() {
       const np = await makePack({ ...inp, language: pack?.language ?? inp.language }, { fresh: true });
       clearPlan(packId, np.language);
       setPack(np);
-      setPlan({ goal: np.plan.objective, steps: np.plan.steps.map((x) => ({ ...x })) });
+      setPlan(swapPlan({ goal: np.plan.objective, steps: np.plan.steps.map((x) => ({ ...x })) }, DEFAULT_SETTING, setting));
     } catch { setFailed(true); }
     setDrafting(false);
   };
@@ -118,12 +134,12 @@ export default function Plan() {
       }
       const st = getSettings();
       void preloadLesson(topicId, st.lang, st.title);
-      const r = await createLesson({ packId, language: isLib ? st.lang : pack?.language ?? st.lang, teacherTitle: st.title, deviceId: deviceId(), plan, previousLessonId: from ?? undefined });
+      const r = await createLesson({ packId, language: isLib ? st.lang : pack?.language ?? st.lang, teacherTitle: st.title, deviceId: deviceId(), plan, previousLessonId: from ?? undefined, ...(demo ? {} : { setting }) });
       nav(`/lesson/${r.lessonId}${demo ? '?demo=1' : withMic ? '' : '?type=1'}`);
     } catch {
       setFailed(true); setBusy(false);
     }
-  }, [packId, topicId, plan, from, demo, nav, isLib, pack]);
+  }, [packId, topicId, plan, from, demo, nav, isLib, pack, setting]);
 
   const start = useCallback(async () => {
     if (busy) return;
@@ -238,17 +254,23 @@ export default function Plan() {
       </section>
 
       <section className="plan-bottom">
-        <div className="class-strip">
-          <h2>{tr('classToday', lang)}</h2>
-          <ul>
-            {KID_IDS.map((k: KidId) => (
-              <li key={k}>
-                <div className="avatar-wrap"><KidAvatar kid={k} level={1} lang={lang} /></div>
-                <div><b>{kidById(k).name[lang]}</b><span>{tr(`persona_${k}` as Key, lang)}</span></div>
-              </li>
-            ))}
-          </ul>
-        </div>
+        <SettingProvider value={setting}>
+          <div className="class-strip">
+            <h2>
+              <span>{tr('classToday', lang)}: <bdi className="class-label">{settingLabel(setting, lang)}</bdi></span>
+              {!demo && <button type="button" className="text-link" aria-expanded={panel} onClick={() => setPanel((o) => !o)}>{tr('classChange', lang)}</button>}
+            </h2>
+            {panel && !demo && <ClassPanel setting={setting} lang={lang} onClose={() => setPanel(false)} isAr={isLib ? s.lang === 'ar' : pack?.language === 'ar'} />}
+            <ul>
+              {KID_IDS.map((k: KidId) => (
+                <li key={k}>
+                  <div className="avatar-wrap"><KidAvatar kid={k} level={1} lang={lang} /></div>
+                  <div><b>{kidName(k, lang, setting)}</b><span>{personaFor(k, setting, lang)}</span></div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </SettingProvider>
         <div className="plan-go">
           {failed && <div role="alert" className="muted">{tr('startFailed', lang)}</div>}
           <button className="btn btn-primary" onClick={() => void start()} disabled={busy || (!demo && plan.steps.length === 0)}>{busy ? tr('loading', lang) : tr('start', lang)}</button>
@@ -267,5 +289,36 @@ export default function Plan() {
       )}
       {demo && showStage && <StageReady lang={lang} result={stageRes} onStart={() => void runStage()} onContinue={() => setShowStage(false)} />}
     </main>
+  );
+}
+
+/** The "Change" panel: three presets, or any mix of the four conditions. */
+function ClassPanel({ setting, lang, onClose, isAr }: { setting: ClassSetting; lang: 'ar' | 'en'; onClose: () => void; isAr: boolean }) {
+  return (
+    <div className="class-panel" role="group" aria-label={tr('classToday', lang)}>
+      <div className="pill-radio" role="radiogroup">
+        {PRESET_IDS.map((id) => (
+          <button key={id} type="button" role="radio" aria-checked={setting.preset === id} onClick={() => setClassSetting(PRESETS[id].setting)}>{PRESETS[id].label[lang]}</button>
+        ))}
+      </div>
+      <div className="class-fields">
+        <label className="cf-size">
+          <span>{tr('classSize', lang)}: <bdi dir="ltr" className="num">{setting.size}</bdi></span>
+          <input type="range" min={SIZE_MIN} max={SIZE_MAX} step={1} value={setting.size} onChange={(e) => setClassSetting({ size: Number(e.target.value) })} />
+        </label>
+        <label className="cf-group">
+          <span>{tr('classGroup', lang)}</span>
+          <select value={setting.group} onChange={(e) => setClassSetting({ group: e.target.value as Group })}>
+            {(['mixed', 'boys', 'girls'] as const).map((g) => <option key={g} value={g}>{GROUP_LABEL[g][lang]}</option>)}
+          </select>
+        </label>
+        {isAr && (
+          <label className="tap-switch"><input type="checkbox" checked={setting.langMix === 'mixed_english'} onChange={(e) => setClassSetting({ langMix: e.target.checked ? 'mixed_english' : 'arabic' })} /> <span>{tr('classEnglish', lang)}</span></label>
+        )}
+        <label className="tap-switch"><input type="checkbox" checked={setting.examFocus === 'high'} onChange={(e) => setClassSetting({ examFocus: e.target.checked ? 'high' : 'normal' })} /> <span>{tr('classExam', lang)}</span></label>
+      </div>
+      <p className="class-note">{tr('classNote', lang)}</p>
+      <button type="button" className="btn btn-outline" onClick={onClose}>{tr('classDone', lang)}</button>
+    </div>
   );
 }

@@ -17,11 +17,11 @@
     },
     {
      "kind": "include",
-     "text": "سؤال للينا باسمها، تقدر تجاوبه بكلمتين."
+     "text": "سؤال قصير لـ{lina} بالاسم، جوابه كلمتين."
     },
     {
      "kind": "challenge",
-     "text": "تحدٍّ ليزن: «أيهما أكبر: 3/4 ولا 4/5؟»"
+     "text": "تحدٍّ لـ{yazan}: «أيهما أكبر: 3/4 ولا 4/5؟»"
     }
    ],
    "trouble_spots": [
@@ -47,11 +47,11 @@
     },
     {
      "kind": "include",
-     "text": "Ask Lina by name: a short question she can answer in two words."
+     "text": "Ask {lina} by name: a short question with a two-word answer."
     },
     {
      "kind": "challenge",
-     "text": "Challenge Yazan: “Which is bigger, 3/4 or 4/5?”"
+     "text": "Challenge {yazan}: “Which is bigger, 3/4 or 4/5?”"
     }
    ],
    "trouble_spots": [
@@ -79,11 +79,11 @@
     },
     {
      "kind": "include",
-     "text": "سؤال للينا باسمها: «وين بتشوفي عدد سالب بالحياة؟»"
+     "text": "سؤال لـ{lina} بالاسم: «وين بنشوف عدد سالب بالحياة؟»"
     },
     {
      "kind": "challenge",
-     "text": "تحدٍّ ليزن: «قديش −3 − (−7)؟ وضّحها على خط الأعداد.»"
+     "text": "تحدٍّ لـ{yazan}: «قديش −3 − (−7)؟ وضّحها على خط الأعداد.»"
     }
    ],
    "trouble_spots": [
@@ -109,11 +109,11 @@
     },
     {
      "kind": "include",
-     "text": "Ask Lina by name: “Where do you see a negative number in real life?”"
+     "text": "Ask {lina} by name: “Where do you see a negative number in real life?”"
     },
     {
      "kind": "challenge",
-     "text": "Challenge Yazan: “What is -3 - (-7)? Show it on a number line.”"
+     "text": "Challenge {yazan}: “What is -3 - (-7)? Show it on a number line.”"
     }
    ],
    "trouble_spots": [
@@ -141,11 +141,11 @@
     },
     {
      "kind": "include",
-     "text": "سؤال للينا باسمها، تقدر تجاوبه بكلمتين: «النبتة بتتنفس بالليل؟»"
+     "text": "سؤال قصير لـ{lina} بالاسم، جوابه كلمتين: «النبتة بتتنفس بالليل؟»"
     },
     {
      "kind": "challenge",
-     "text": "تحدٍّ ليزن: «ليش النبتة بتموت بغرفة معتمة حتى لو في مي وتراب؟»"
+     "text": "تحدٍّ لـ{yazan}: «ليش النبتة بتموت بغرفة معتمة حتى لو في مي وتراب؟»"
     }
    ],
    "trouble_spots": [
@@ -171,11 +171,11 @@
     },
     {
      "kind": "include",
-     "text": "Ask Lina by name: “Does a plant breathe at night?” She can answer in two words."
+     "text": "Ask {lina} by name: a short question with a two-word answer: “Does a plant breathe at night?”"
     },
     {
      "kind": "challenge",
-     "text": "Challenge Yazan: “Why does a plant in a dark room die even with water and soil?”"
+     "text": "Challenge {yazan}: “Why does a plant in a dark room die even with water and soil?”"
     }
    ],
    "trouble_spots": [

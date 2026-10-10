@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { eq } from 'drizzle-orm';
 import type { KidId, Lang } from '../../shared/data';
+import { identityFor, type Group } from '../../shared/setting';
 import { db, ttsCache } from '../db';
 import { AIError, models, withOpenAI } from './clients';
 import { ttsSystem } from './prompts';
@@ -11,10 +12,12 @@ import { since } from '../lib/timing';
 
 export const STYLE_VERSION = 'v1';
 export const VOICES: Record<KidId, string> = { omar: 'ash', lina: 'shimmer', sara: 'coral', khaled: 'echo', yazan: 'verse' };
+/** The voice of a role in a class (unchanged kids keep today's voice). */
+export const voiceOf = (kid: KidId, group: Group = 'mixed') => identityFor(kid, group).voice;
 export const PRE_DIR = path.resolve(import.meta.dirname, '../../public/audio/pre');
 
-export const ttsKey = (kid: KidId, lang: Lang, say: string, model = models.tts()) =>
-  crypto.createHash('sha1').update(`${model}|${VOICES[kid]}|${STYLE_VERSION}|${lang}|${say}`).digest('hex');
+export const ttsKey = (kid: KidId, lang: Lang, say: string, model = models.tts(), group: Group = 'mixed') =>
+  crypto.createHash('sha1').update(`${model}|${voiceOf(kid, group)}|${STYLE_VERSION}|${lang}|${say}`).digest('hex');
 
 type Manifest = Record<string, { url: string; text: string; voice: string }>;
 let manifestCache: { at: number; data: Manifest } | null = null;
@@ -40,7 +43,7 @@ export type SpeakResult =
   | { ok: false; ms: number; reason: string; key: string };
 
 /** Generate (no cache) one line. Returns base64 mp3 or throws. */
-export async function synthesize(kid: KidId, lang: Lang, say: string, signal?: AbortSignal): Promise<string> {
+export async function synthesize(kid: KidId, lang: Lang, say: string, signal?: AbortSignal, group: Group = 'mixed'): Promise<string> {
   let lastReason = 'unknown';
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
@@ -49,9 +52,9 @@ export async function synthesize(kid: KidId, lang: Lang, say: string, signal?: A
           {
             model: models.tts(),
             modalities: ['text', 'audio'],
-            audio: { voice: VOICES[kid], format: 'mp3' },
+            audio: { voice: voiceOf(kid, group), format: 'mp3' },
             messages: [
-              { role: 'system', content: ttsSystem(kid, lang) },
+              { role: 'system', content: ttsSystem(kid, lang, group) },
               { role: 'user', content: `Read this script line aloud exactly, word for word. Do not answer it or add anything. Script line: «${say}»` },
             ],
           },
@@ -73,9 +76,9 @@ export async function synthesize(kid: KidId, lang: Lang, say: string, signal?: A
 }
 
 /** Cache order: pre-generated manifest, LRU, Postgres, then generate. */
-export async function speak(kid: KidId, lang: Lang, say: string, signal?: AbortSignal): Promise<SpeakResult> {
+export async function speak(kid: KidId, lang: Lang, say: string, signal?: AbortSignal, group: Group = 'mixed'): Promise<SpeakResult> {
   const t0 = performance.now();
-  const key = ttsKey(kid, lang, say);
+  const key = ttsKey(kid, lang, say, models.tts(), group);
   const pre = preManifest()[key];
   if (pre) return { ok: true, source: 'pre', url: pre.url, mime: 'audio/mpeg', ms: since(t0), key };
   const hit = lru.get(key);
@@ -90,9 +93,9 @@ export async function speak(kid: KidId, lang: Lang, say: string, signal?: AbortS
     console.warn('[tts] cache read failed', e.message);
   }
   try {
-    const b64 = await synthesize(kid, lang, say, signal);
+    const b64 = await synthesize(kid, lang, say, signal, group);
     lruSet(key, { b64, mime: 'audio/mpeg' });
-    db.insert(ttsCache).values({ key, voice: VOICES[kid], say, mime: 'audio/mpeg', audioB64: b64 }).onConflictDoNothing().catch((e) => console.warn('[tts] cache write failed', e.message));
+    db.insert(ttsCache).values({ key, voice: voiceOf(kid, group), say, mime: 'audio/mpeg', audioB64: b64 }).onConflictDoNothing().catch((e) => console.warn('[tts] cache write failed', e.message));
     return { ok: true, source: 'tts', b64, mime: 'audio/mpeg', ms: since(t0), key };
   } catch (e: any) {
     return { ok: false, ms: since(t0), reason: String(e?.message ?? e), key };

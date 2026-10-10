@@ -1,4 +1,5 @@
 import { KID_IDS, kidById, topicById, type KidId, type Lang, type Levels } from '../../shared/data';
+import { DEFAULT_SETTING, identityFor, judgeKidTableName, linesConditions, scorerConditions, type ClassSetting, type Group } from '../../shared/setting';
 
 export const JUDGE_SYSTEM = `You are the evaluation engine of Sabboura, a teacher-training simulator.
 
@@ -119,9 +120,12 @@ words; Arabic in clear Modern Standard Arabic with light Jordanian warmth,
 addressing the teacher as female for مس and male for أستاذ; quote only
 words that appear in the log. Return only JSON that matches the schema.`;
 
-export function ttsSystem(kid: KidId, lang: Lang): string {
-  const def = kidById(kid);
-  const who = def.gender === 'f' ? 'girl' : 'boy';
+/** The kid-lines system prompt; the CLASS CONDITIONS note is added only for non-default settings. */
+export const linesSystemFor = (setting: ClassSetting, lang: Lang) => LINES_SYSTEM + linesConditions(setting, lang);
+export const scorerSystemFor = (setting: ClassSetting) => SCORER_SYSTEM + scorerConditions(setting);
+
+export function ttsSystem(kid: KidId, lang: Lang, group: Group = 'mixed'): string {
+  const who = identityFor(kid, group).gender === 'f' ? 'girl' : 'boy';
   const accent = lang === 'ar' ? 'Jordanian Arabic accent' : 'simple kid English';
   const shy = kid === 'lina' ? ' Shy and quiet.' : '';
   return `You are a voice actor in a school play. The user message contains a script line,
@@ -131,11 +135,11 @@ Voice: a lively 10-year-old ${who} from Amman, ${accent}, quick and natural.${sh
 }
 
 /** Judge system block = the prompt plus the topic's kid table, as one cached block. */
-export function judgeSystemFor(topicId: string): string {
+export function judgeSystemFor(topicId: string, setting: ClassSetting = DEFAULT_SETTING): string {
   const t = topicById(topicId);
   const table = KID_IDS.map((k) => {
     const d = t.kids[k];
-    return `- ${k} (${kidById(k).personality}) misconception: ${d.misconception}\n  helped_if: ${d.helped_if}\n  hurt_if: ${d.hurt_if}`;
+    return `- ${k}${judgeKidTableName(k, setting)} (${kidById(k).personality}) misconception: ${d.misconception}\n  helped_if: ${d.helped_if}\n  hurt_if: ${d.hurt_if}`;
   }).join('\n');
   return `${JUDGE_SYSTEM.replace('{TOPIC}', t.title.en.toLowerCase())}\n\nTOPIC: ${t.title.en} (${t.title.ar}), grade ${t.grade}\nKID TABLE:\n${table}`;
 }

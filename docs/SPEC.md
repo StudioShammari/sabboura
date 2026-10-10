@@ -2608,6 +2608,22 @@ The app is three phases with a stepper (1 Plan, 2 Teach, 3 Reflect).
 
 **Upload.** Home takes a PDF, JPG, PNG, WebP (10 MB) or pasted text (12,000 characters). Photos are shrunk on the device to a 2000 px long edge. The server checks the type from the first bytes, keeps only the chosen page range of a PDF ("From page __ to page __", default 1 to 6, at most 6 pages, clamped to the PDF length) with pdf-lib and makes one Claude call (`CLAUDE_PACK_MODELS`, falling back to the scorer list) that returns the plan, 3 trouble spots and per-kid misconceptions. If the material is exactly a ready lesson's topic the ready lesson's researched topic is used. Otherwise a topic is built in topics.json shape and registered at boot and on lesson load. Uploaded topics have no canned lines (kids fall back to their failsafe line). The pack id is a hash of the content, language and PDF page range (from-to), so the same upload again is instant. The file itself is never stored.
 
+## v3: Class settings (conditions, not abilities)
+
+A teacher can practise with a class like theirs. A setting describes the room's conditions (size, group, language mix, exam focus). It never describes how able the kids are. The Plan page and the settings panel say so: «الإعدادات بتغيّر ظروف الصف، مش قدرات الطلاب.» / "Settings change the room, not the kids' abilities."
+
+**Presets.** Private · mixed · 24 students (the default, behaves exactly as before); Public · boys · 42; Public · girls · 38; custom (size 15 to 45, group, English mix for Arabic lessons, exam focus). A class of 35 or more is "large". The setting is remembered in the browser (`sabboura.class.v1`), saved on the lesson (`setting_json`), shown in the review header, and kept by "Teach it again". Stage mode (`?demo=1`) always runs the default, read-only.
+
+**Group (names, voices, grammar, portraits only).** The five roles never change (omar, lina, sara, khaled, yazan keep their misconceptions, levels and rules). Only the shown identity changes. Boys: lina is Yousef, sara is Saif. Girls: omar is Rahaf, khaled is Dana, yazan is Jana. Changed kids get a voice of the right gender, generated live (never pre-recorded), and a portrait. Chorus in a boys' or girls' class reuses the recorded clips of the same gender, a little faster or slower and at different moments.
+
+**Large class.** A "Back of the class" strip (quiet / murmuring / drifting / chatty) rises after a long talk or a second turn without a real question, and falls after a question to everyone. From "murmuring" a soft murmur plays (never in Calm mode). The chorus adds three quieter copies. A raised hand comes every third turn, not every second. The review shows one line about it, tagged "shown, not scored". The score formula is unchanged.
+
+**English mix (Arabic lessons).** Kid lines carry one or two English school words; transcription is told about them; captions show what is said.
+
+**Exam focus.** khaled asks «هاد بيجي بالامتحان؟» and sara asks «طيب شو القاعدة اللي بنحفظها؟». Misconceptions do not change.
+
+**Checks.** `pnpm test:setting` (default prompts unchanged, boys «يوسف» to asked_kid lina, back-row timeline, girls, exam focus), `pnpm test:judge`, `pnpm test:plan`.
+
 ## Sources
 
 - Rosenshine, "Principles of Instruction," *American Educator*, 2012: <https://www.aft.org/sites/default/files/periodicals/Rosenshine.pdf>

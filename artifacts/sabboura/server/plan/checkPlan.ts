@@ -4,6 +4,7 @@ import type { Plan, PlanCheck, PlanKind, PlanRow } from '../../shared/plan';
 import { AIError, claudeJSON } from '../ai/clients';
 import { normalise, overlap, words } from '../lib/arabic';
 import type { TurnRec } from '../rules/score';
+import { DEFAULT_SETTING, kidIdentity, type ClassSetting } from '../../shared/setting';
 
 /** The checklist compares the teacher's own plan with what was said. It never touches the score. */
 
@@ -46,15 +47,15 @@ const PlanCheckOut = z.object({
   })),
 });
 
-export interface PlanInput { language: Lang; topicId: string; plan: Plan; turns: TurnRec[] }
+export interface PlanInput { language: Lang; topicId: string; plan: Plan; turns: TurnRec[]; setting?: ClassSetting }
 
 const AI_KINDS: PlanKind[] = ['explain', 'example', 'other'];
 
-function namedKid(text: string): KidId | null {
+function namedKid(text: string, setting: ClassSetting = DEFAULT_SETTING): KidId | null {
   const n = normalise(text);
   const ws = new Set(words(text));
   for (const k of KID_IDS) {
-    const d = kidById(k);
+    const d = kidIdentity(k, setting);
     // whole words only; Arabic may carry the «ل» prefix («للينا»), but «العمر» is not Omar
     const ar = normalise(d.name.ar);
     if (ws.has(ar) || ws.has('ل' + ar)) return k;
@@ -66,6 +67,7 @@ function namedKid(text: string): KidId | null {
 /** Fast part: every row that code alone can decide. AI rows come back as "pending". */
 export function checkPlanCode(inp: PlanInput): PlanCheck {
   const { plan, turns, language: lang } = inp;
+  const setting = inp.setting ?? DEFAULT_SETTING;
   const topic = topicById(inp.topicId);
   const used: Record<string, Set<number>> = { check: new Set(), include: new Set(), challenge: new Set() };
   const nc = (k: KidId) => topic.kids[k].next_check[lang];
@@ -77,14 +79,14 @@ export function checkPlanCode(inp: PlanInput): PlanCheck {
       return { ...base, status: 'not_yet', next_time: nc('omar') };
     }
     if (s.kind === 'include') {
-      const only = namedKid(s.text);
+      const only = namedKid(s.text, setting);
       const free = turns.filter((x) => x.askedKid && (!only || x.askedKid === only) && !used.include.has(x.turnNo));
       const done = free.find((x) => x.check === 'question');
       const part = free[0];
       const hit = done ?? part;
-      if (hit) { used.include.add(hit.turnNo); return { ...base, status: done ? 'done' : 'partly', turn: hit.turnNo, evidence: hit.transcript, next_time: done ? null : `${kidById(hit.askedKid!).name[lang]}${lang === 'ar' ? '،' : ','} ${nc(hit.askedKid!)}` }; }
+      if (hit) { used.include.add(hit.turnNo); return { ...base, status: done ? 'done' : 'partly', turn: hit.turnNo, evidence: hit.transcript, next_time: done ? null : `${kidIdentity(hit.askedKid!, setting).name[lang]}${lang === 'ar' ? '،' : ','} ${nc(hit.askedKid!)}` }; }
       const k = only ?? 'lina';
-      return { ...base, status: 'not_yet', next_time: `${kidById(k).name[lang]}${lang === 'ar' ? '،' : ','} ${nc(k)}` };
+      return { ...base, status: 'not_yet', next_time: `${kidIdentity(k, setting).name[lang]}${lang === 'ar' ? '،' : ','} ${nc(k)}` };
     }
     if (s.kind === 'challenge') {
       const t = turns.find((x) => x.levelsAfter.yazan === 2 && !used.challenge.has(x.turnNo));

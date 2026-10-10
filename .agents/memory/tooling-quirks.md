@@ -13,3 +13,9 @@ description: Environment gotchas hit while building Sabboura
 - A GitHub account authorization can show as healthy/active while shell `git push` and `gh` remain unauthenticated; an “already active” bind is not proof the CLI can push. Verify actual Git access and treat this as a Replit auth-bridge issue rather than asking for a token.
 **Why:** The connection reported repository write scope and binding success, but `git push` still returned invalid username/token and `gh auth status` reported no login.
 **How to apply:** After connecting GitHub, verify the configured remote push before claiming success; do not expose or request credentials.
+
+## Server does not hot-reload shared/ edits
+After editing `shared/*.ts` or server code, restart the workflow before running live checks (TTS voices, prompts, scorer). A stale server silently ignored new voices and prompt notes.
+
+## Class settings (conditions, not abilities)
+Roles never change; only display identity. Default setting must stay byte-identical (prompts add notes only for non-default). Changed-gender kids use live TTS voices chosen by pitch check (F0 via ffmpeg autocorrelation; gender not confirmed by ear). Portraits made with Replit built-in generateImage as 2x2 mood sheets cropped to webp (never the personal-key gen:avatars script).

@@ -8,6 +8,8 @@ import { tr, useT } from '@/i18n';
 import { getReplay, type Replay as ReplayData } from '@/lib/api';
 import { decodeUrl, fadeOutAll, playBuffer, unlockAudio } from '@/lib/audio';
 import { setSettings } from '@/lib/store';
+import { SettingProvider } from '@/lib/classSetting';
+import { normalizeSetting } from '@shared/setting';
 
 /** Demo backup: loads a recorded lesson, preloads every clip, then plays it turn by turn (arrow / PageDown). No network after loading. */
 export default function Replay() {
@@ -71,6 +73,7 @@ export default function Replay() {
   const topic = topicById(data.topicId);
   const turn = data.turns[idx];
   return (
+    <SettingProvider value={normalizeSetting(data.setting)}>
     <main className="classroom" dir={lang === 'ar' ? 'rtl' : 'ltr'} onClick={() => void next()}>
       <header className="topbar"><span className="logo">{lang === 'ar' ? 'سبّورة' : 'Sabboura'}</span><div className="center"><b>{tr('replayLabel', lang)}</b><span>{Math.max(idx + 1, 0)}/{data.turns.length}</span></div><span /></header>
       <section className="wall">
@@ -82,5 +85,6 @@ export default function Replay() {
       </section>
       <footer className="dock"><div className="mic-wrap"><div className="mic-label">{loaded ? '→' : tr('loading', lang)}</div></div></footer>
     </main>
+    </SettingProvider>
   );
 }

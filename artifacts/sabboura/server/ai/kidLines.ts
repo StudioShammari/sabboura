@@ -1,7 +1,8 @@
 import { LINES_JSON_SCHEMA, LinesOut, type Speaker, type SpeakReason } from '../../shared/schemas';
 import { addressTerm, canned, expandT, kidById, topicById, type KidId, type Lang, type Levels, type Title, type Line } from '../../shared/data';
 import { AIError, claudeJSON } from './clients';
-import { LINES_SYSTEM } from './prompts';
+import { linesSystemFor } from './prompts';
+import { DEFAULT_SETTING, examLine, kidIdentity, kidName, type ClassSetting } from '../../shared/setting';
 import { stripEmojiAndQuotes, truncateWords } from '../lib/arabic';
 import { since } from '../lib/timing';
 
@@ -14,7 +15,9 @@ function fromCanned(l: Line, lang: Lang, title: Title) {
   return { text, say, text_en };
 }
 
-export function starterLine(topicId: string, kid: KidId, lang: Lang, title: Title) {
+export function starterLine(topicId: string, kid: KidId, lang: Lang, title: Title, setting: ClassSetting = DEFAULT_SETTING) {
+  const ex = examLine(kid, setting);
+  if (ex) return { text: ex[lang], say: ex[lang], text_en: ex.en };
   const l = canned.starters[topicId]?.[kid];
   return l ? fromCanned(l, lang, title) : null;
 }
@@ -25,7 +28,9 @@ export function failsafeLine(kid: KidId, lang: Lang) {
 }
 
 /** Canned line for a kid + reason (B3.7). Always returns something. */
-export function cannedLine(topicId: string, kid: KidId, reason: SpeakReason, lang: Lang, title: Title, taught = true) {
+export function cannedLine(topicId: string, kid: KidId, reason: SpeakReason, lang: Lang, title: Title, taught = true, setting: ClassSetting = DEFAULT_SETTING) {
+  const ex = reason === 'objection' || (reason === 'question' && taught !== false) ? examLine(kid, setting) : null;
+  if (ex) return { text: ex[lang], say: ex[lang], text_en: ex.en };
   let l: Line | undefined;
   if (reason === 'objection') l = canned.starters[topicId]?.[kid];
   else if (reason === 'answer') l = kid === 'lina' ? canned.answer_lost[topicId]?.lina : canned.starters[topicId]?.[kid];
@@ -53,7 +58,9 @@ export async function generateLines(args: {
   /** Earlier teacher turns and what the kids already said. */
   context?: { teacher: string[]; kids: { kid: KidId; text: string }[] };
   signal?: AbortSignal;
+  setting?: ClassSetting;
 }): Promise<LinesResult> {
+  const setting = args.setting ?? DEFAULT_SETTING;
   const t0 = performance.now();
   const topic = topicById(args.topicId);
   const user = JSON.stringify({
@@ -62,11 +69,12 @@ export async function generateLines(args: {
     teacher_said: args.transcript,
     topic_taught: args.taught ?? true,
     ...(args.context?.teacher.length ? { earlier_teacher_turns: args.context.teacher } : {}),
-    ...(args.context?.kids.length ? { kids_already_said: args.context.kids.map((k) => `${kidById(k.kid).name.en}: ${k.text}`) } : {}),
+    ...(args.context?.kids.length ? { kids_already_said: args.context.kids.map((k) => `${kidName(k.kid, 'en', setting)}: ${k.text}`) } : {}),
     ...(args.avoid?.length ? { avoid: args.avoid } : {}),
     speakers: args.speakers.map((s) => {
       const d = kidById(s.kid);
-      const base = { id: s.kid, name: d.name.en, gender: d.gender === 'f' ? 'girl' : 'boy', personality: d.personality, reason: s.reason };
+      const who = kidIdentity(s.kid, setting);
+      const base = { id: s.kid, name: who.name.en, gender: who.gender === 'f' ? 'girl' : 'boy', personality: d.personality, reason: s.reason };
       // Before the topic is taught (or while chatting) a kid has no misconception to voice.
       if (s.reason === 'chat' || (s.reason === 'question' && !args.taught)) return base;
       return { ...base, misconception: topic.kids[s.kid].misconception, level: args.levels[s.kid] };
@@ -78,7 +86,7 @@ export async function generateLines(args: {
     attempts++;
     try {
       const r = await claudeJSON({
-        purpose: 'lines', system: LINES_SYSTEM, user, jsonSchema: LINES_JSON_SCHEMA, zod: LinesOut,
+        purpose: 'lines', system: linesSystemFor(setting, args.lang), user, jsonSchema: LINES_JSON_SCHEMA, zod: LinesOut,
         maxTokens: 2000, timeoutMs, signal: args.signal,
       });
       const got = r.value.lines;
@@ -86,7 +94,7 @@ export async function generateLines(args: {
         const g = got[i];
         const ok = g && g.kid === s.kid;
         const text = ok ? truncateWords(stripEmojiAndQuotes(g.text), 15) : '';
-        if (!ok || !text) return { kid: s.kid, reason: s.reason, ...cannedLine(args.topicId, s.kid, s.reason, args.lang, args.title, args.taught), source: 'canned' as const };
+        if (!ok || !text) return { kid: s.kid, reason: s.reason, ...cannedLine(args.topicId, s.kid, s.reason, args.lang, args.title, args.taught, setting), source: 'canned' as const };
         const say = truncateWords(stripEmojiAndQuotes(g.say || g.text), 15) || text;
         const text_en = args.lang === 'en' ? text : stripEmojiAndQuotes(g.text_en || '') || text;
         return { kid: s.kid, reason: s.reason, text, say, text_en, source: 'ai' as const };
@@ -98,7 +106,7 @@ export async function generateLines(args: {
     }
   }
   return {
-    lines: args.speakers.map((s) => ({ kid: s.kid, reason: s.reason, ...cannedLine(args.topicId, s.kid, s.reason, args.lang, args.title, args.taught), source: 'canned' as const })),
+    lines: args.speakers.map((s) => ({ kid: s.kid, reason: s.reason, ...cannedLine(args.topicId, s.kid, s.reason, args.lang, args.title, args.taught, setting), source: 'canned' as const })),
     model: null, ms: since(t0), ok: false, error: lastErr,
   };
 }

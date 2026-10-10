@@ -1,5 +1,6 @@
 import plansJson from '../../../data/plans.json';
 import type { Lang } from './data';
+import { DEFAULT_SETTING, fillNames, type ClassSetting } from './setting';
 
 export const PLAN_KINDS = ['explain', 'example', 'check', 'include', 'challenge', 'other'] as const;
 export type PlanKind = (typeof PLAN_KINDS)[number];
@@ -14,9 +15,10 @@ export const hasDefaults = (topicId: string) => !!plans[topicId];
 export function defaultsFor(topicId: string, lang: Lang): PlanDefaults {
   return (plans[topicId] ?? plans.fractions)[lang];
 }
-export const defaultPlan = (topicId: string, lang: Lang): Plan => {
+/** The ready-made plan; {lina} / {yazan} in its steps are filled with the class's names. */
+export const defaultPlan = (topicId: string, lang: Lang, setting: ClassSetting = DEFAULT_SETTING): Plan => {
   const d = defaultsFor(topicId, lang);
-  return { goal: d.objective, steps: d.steps.map((s) => ({ ...s })) };
+  return { goal: d.objective, steps: d.steps.map((s) => ({ ...s, text: fillNames(s.text, lang, setting) })) };
 };
 
 // ---------------- checklist result ----------------

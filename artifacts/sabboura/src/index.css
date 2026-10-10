@@ -376,6 +376,19 @@ table.replay button.sel { border-color: var(--action); }
 .class-strip b { display: block; font-family: var(--f-kid); font-size: 1.05rem; line-height: 1.2; }
 .class-strip li span { display: block; font-size: 1rem; line-height: 1.25; color: var(--ink-muted); font-weight: 500; }
 .plan-go { display: grid; gap: 6px; justify-items: end; }
+.class-strip { position: relative; }
+.class-strip h2 { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+.class-strip h2 .class-label { color: var(--ink); }
+.class-strip h2 .text-link { font-family: var(--f-ui); font-size: 1rem; }
+.class-panel { position: absolute; z-index: 20; inset-inline-start: 0; bottom: calc(100% + 6px); width: min(560px, 100%); display: grid; gap: 10px; padding: 14px; background: var(--paper); border: 2px solid var(--line-strong); border-radius: 14px; box-shadow: 0 6px 18px rgba(43, 33, 24, .18); }
+.class-fields { display: grid; gap: 10px; }
+.class-fields label { display: grid; gap: 4px; font-weight: 600; font-size: 1rem; }
+.class-fields label.tap-switch { display: inline-flex; }
+.class-fields input[type=range] { width: 100%; accent-color: var(--action); min-height: 32px; }
+.class-fields select { min-height: 44px; border: 2px solid var(--line-strong); background: var(--paper); border-radius: 999px; padding-inline: 12px; font-weight: 600; max-width: 220px; }
+.class-note { margin: 0; color: var(--ink-muted); font-size: 1rem; }
+.class-panel .btn { justify-self: start; min-height: 44px; font-size: 1rem; padding: 4px 18px; }
+@media (max-width: 899px) { .class-panel { position: static; width: 100%; margin-bottom: 8px; } }
 
 @media (min-width: 900px) and (min-height: 620px) {
   .plan-page { height: 100dvh; grid-template-columns: minmax(300px, 4fr) 7fr; grid-template-rows: auto minmax(0, 1fr) auto; padding: 10px 24px 14px; }
@@ -474,3 +487,10 @@ table.replay button.sel { border-color: var(--action); }
 .upload-foot .btn { white-space: nowrap; }
 .upload-foot .pages-field { flex: 1 1 100%; }
 .plan-pop { max-height: 34vh; overflow-y: auto; }
+
+/* back of the class (large classes only) */
+.back-row { display: flex; align-items: center; gap: 10px; font-size: 1rem; font-weight: 600; color: var(--ink); background: var(--paper); border: 2px solid var(--line-strong); border-radius: 999px; padding: 2px 14px; min-height: 32px; }
+.back-row .br-pips { display: inline-flex; gap: 4px; }
+.back-row .br-pips i { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--ink); background: var(--paper); }
+.back-row .br-pips i.on { background: var(--ink); }
+.back-row .br-state { min-width: 5.5em; }

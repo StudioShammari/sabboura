@@ -1,0 +1,144 @@
+Add "class settings" so a teacher can practise with a class like theirs. Read this whole message first, then do Parts A → D in order.
+
+## The rule that matters most
+
+A setting describes the room's CONDITIONS, never the kids:
+- **The conditions are:** class size, who is in the class (mixed, boys or girls), the language mix, and exam focus.
+- **Never the kids' ability**, intelligence, manners or background.
+- **Every behaviour change below comes from one of those four conditions** and nothing else.
+- **Never write anything like "public-school kids are…"** in code, prompts, copy or comments.
+- **Show this line wherever settings are chosen:** "الإعدادات بتغيّر ظروف الصف، مش قدرات الطلاب. / Settings change the room, not the kids' abilities."
+
+## Guardrails
+
+- **The default setting must behave EXACTLY like today:**
+  - the same names, voices, clips, rules and score;
+  - prompts that are byte-identical;
+  - stage mode (`?demo=1`) always uses the default setting, read-only;
+  - `data/judge-tests.json` and the demo numbers don't change.
+- **Never change the score formula.** Anything new is "shown, not scored".
+- **The asset rule in replit.md still applies:**
+  - never generate images or pre-recorded audio with our personal API keys;
+  - use Replit's built-in image tools, or fall back to the initial-letter tiles;
+  - never run gen:audio.
+- **Database changes are additive only.**
+- **All copy goes in i18n** (Arabic and English).
+- **After each part:**
+  - take screenshots (1280×720 and 390×844, Arabic and English);
+  - run `pnpm test:judge -- --rows 1,2,3,4,7` and `pnpm test:plan`;
+  - show me all of it.
+
+## PART A: the setting and where the teacher picks it
+
+1. **`shared/setting.ts`:**
+
+   ```
+   ClassSetting = { preset: 'private_mixed' | 'public_boys' | 'public_girls' | 'custom',
+                    size: number (15–45), group: 'mixed' | 'boys' | 'girls',
+                    langMix: 'arabic' | 'mixed_english', examFocus: 'normal' | 'high' }
+   ```
+
+   The presets' labels only describe conditions:
+
+   | Preset | Label | size | group | langMix | examFocus |
+   |---|---|---|---|---|---|
+   | `private_mixed` (DEFAULT, today's behaviour) | "خاصة · مختلط · 24 طالب" / "Private · mixed · 24 students" | 24 | mixed | arabic | normal |
+   | `public_boys` | "حكومية · ذكور · 42 طالب" / "Public · boys · 42 students" | 42 | boys | arabic | normal |
+   | `public_girls` | "حكومية · إناث · 38 طالب" / "Public · girls · 38 students" | 38 | girls | arabic | normal |
+   | `custom` | any combination | | | | |
+
+   `large` = size ≥ 35.
+2. **Plan page, "Your class today" strip:**
+   - Header line: "صفّك اليوم: {label} · غيّر / Your class today: {label} · Change".
+   - "Change" opens a small panel with:
+     - the 3 presets as pills;
+     - custom fields: class size (a slider, 15–45); class (mixed, boys or girls); a "Kids mix English words into Arabic" switch (Arabic lessons only); an "Exam focus: high" switch;
+     - the conditions-not-abilities line.
+   - The strip updates names and portraits at once.
+   - Remember the last choice in localStorage (inside try/catch).
+   - In stage mode the strip is read-only and always shows the default.
+3. **Saving the setting:**
+   - Lessons get a nullable `setting_json`.
+   - POST /api/lessons accepts `setting`; if it's missing, use the default.
+   - The review header shows the setting label after the topic.
+   - "Teach it again" and "Edit plan and teach again" keep the setting.
+
+## PART B: who is in the class (names, gender, voices)
+
+The 5 ROLES never change. Their ids (omar, lina, sara, khaled, yazan), misconceptions, rules and personalities stay the same. Only their display identity changes with `group`:
+
+| Role | mixed (default) | boys | girls |
+|---|---|---|---|
+| omar | عمر Omar (m) | عمر Omar (m) | رهف Rahaf (f) |
+| lina | لينا Lina (f) | يوسف Yousef (m) | لينا Lina (f) |
+| sara | سارة Sara (f) | سيف Saif (m) | سارة Sara (f) |
+| khaled | خالد Khaled (m) | خالد Khaled (m) | دانا Dana (f) |
+| yazan | يزن Yazan (m) | يزن Yazan (m) | جنى Jana (f) |
+
+- **`kidIdentity(role, setting)`** returns `{name:{ar,en}, gender, voice, avatarBase}`. Use it everywhere a kid's name or gender shows or matters:
+  - the cards and the badges (the ar_m / ar_f labels);
+  - the ledge, the review, the reveal, the replay and the Plan strip;
+  - the kid-lines prompt and the TTS system prompt (boy or girl);
+  - the kid names in the STT prompt sentence;
+  - the judge's asked_kid detection, checkPlan's namedKid, and plan text.
+- **The judge:** for the boys and girls groups, add each kid's display name to the KID TABLE line, for example "- lina (called يوسف / Yousef, a boy) …", so asked_kid works with the new names. For the default group, the judge prompt stays byte-identical.
+- **Plan text:**
+  - Make the include and challenge steps in plans.json gender-neutral, with name placeholders: "سؤال قصير لـ{lina} بالاسم، جوابه كلمتين." / "Ask {lina} by name: a short question with a two-word answer.", and "تحدٍّ لـ{yazan}: «…»" / "Challenge {yazan}: “…”".
+  - Fill the placeholders from the setting.
+  - For uploaded packs, swap the default names in plan text (Lina, Yazan, لينا, يزن) for the setting's names.
+- **Voices:**
+  - When a kid's gender changes, pick a clearly different voice of the right gender from the voices gpt-audio-mini supports. No two kids share a voice.
+  - Kids who don't change keep today's voices.
+  - Use live TTS only.
+- **Pre-recorded clips: never generate new ones.**
+  - In a boys' or girls' class, the chorus reuses the existing clips of the same-gender kids. Vary playbackRate (0.94–1.08) and the start delays so it doesn't sound duplicated.
+  - The chorus keeps the lina role late and quiet, whatever the kid's gender.
+  - Other pre-recorded lines for a changed kid (fail-safe lines, starters) use live TTS, or show the caption only if that fails.
+- **Portraits:**
+  - Keep the naming `{avatarBase}-{mood}.webp`.
+  - Make the 5 new kids (Rahaf, Dana, Jana, Yousef, Saif) only with Replit's built-in image tools, in the existing style: the same style block, uniform and flat background. Mix the girls with and without a white school hijab.
+  - Moods: neutral, happy, confused and eager, plus bored for Jana.
+  - If that isn't possible, show initial-letter tiles for them. Don't block on images.
+
+## PART C: what the conditions change in behaviour
+
+- **All dials live in `shared/setting.ts` as data**, so they're testable.
+- **Prompts get a short CLASS CONDITIONS note only for non-default settings.** Default prompts stay byte-identical.
+
+1. **Large class (size ≥ 35):**
+   - **"Back of the class" strip:** a slim ink/grey strip above the class row.
+     - Label: "آخر الصف · {size} طالب / Back of the class · {size} students".
+     - Level 0–3: هادي، في همس، بدأ يتلهّى، صاير في حكي / quiet, murmuring, drifting, chatty.
+     - The code rules, per teacher turn:
+       - +1 if the teacher talked for more than 30 s, or if this is the 2nd turn in a row with no real question;
+       - −1 if the turn has a real question to the whole class (check = "question" and no kid named);
+       - clamp the level to 0–3.
+     - At level 2 and above, play a soft murmur, synthesised in sfx.ts, under the voices and off in Calm mode.
+     - No status colours, and no score.
+   - **The chorus:** add 3 extra, quieter copies (gain 0.3, extra delays of 60–320 ms) so it sounds like a big class.
+   - **Raised hands:** about one every 3rd turn instead of every 2nd, since 40-plus kids share one teacher.
+   - **The review:** one line, shown and not scored: "آخر الصف: بدأ يتلهّى بالمداخلات 3–4 / Back of the class: drifted in turns 3–4", or "stayed with you".
+   - **The scorer:** pass the class conditions, so one_tip and try_saying fit a large class. For example, everyone answers at once: fingers up, mini whiteboards, or "tell your neighbour, then I'll pick". The score numbers don't change.
+2. **Language mix `mixed_english`** (Arabic lessons only):
+   - Kid lines may mix in English school words, the way bilingual kids do: "Miss، بس ليش الـdenominator أكبر؟".
+   - Add those English words to the STT prompt sentence.
+   - Captions show exactly what's said.
+3. **Exam focus `high`:**
+   - The relevance kid (the khaled role) asks about the exam instead of real life: "هاد بيجي بالامتحان؟" / "Is this in the exam?".
+   - The rule-memoriser (the sara role) asks for the rule to memorise: "طيب شو القاعدة اللي بنحفظها؟" / "So what's the rule we memorise?".
+   - Their misconceptions, helped_if and hurt_if don't change. Answering "yes, it's in the exam" still doesn't reach the relevance kid, because hurt_if already covers it; the teacher still needs a real example or the reason.
+4. **Group (boys or girls)** changes names, voices, grammar and portraits only. It never changes behaviour.
+
+## PART D: checks
+
+- **Default setting:** run the 4 demo lines. The lines, chorus, badges, score (about 77) and checklist (4 of 5) all match today, and test:judge and test:plan pass.
+- **Public boys (42):**
+  - the lina role is Yousef, and «يوسف، أيهما أكبر: نص ولا ثلث؟» sets asked_kid = lina;
+  - the back-of-class strip rises after two long turns with no question, and falls after «كل واحد يرفع إصبع: النص ولا الثلث أكبر؟»;
+  - the chorus sounds bigger.
+- **Public girls (38):** five girls, feminine grammar on every badge and line, and female voices.
+- **Exam focus high:** the khaled role asks about the exam.
+- **Screenshots:** the Plan strip with each preset, and the "Change" panel.
+- **Docs:**
+  - Add a short "Class settings (conditions, not abilities)" section to docs/SPEC.md.
+  - Add rule 15 to replit.md: "Class settings change conditions only (size, group, language mix, exam focus), never kids' abilities. The default setting stays byte-identical."

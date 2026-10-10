@@ -1,5 +1,6 @@
 import { useSettings } from '@/lib/store';
-import type { Lang } from '@shared/data';
+import type { KidId, Lang } from '@shared/data';
+import { kidIdentity, type ClassSetting } from '@shared/setting';
 
 type S = { ar: string; en: string };
 export const strings = {
@@ -163,6 +164,27 @@ export const strings = {
   tip_noexample: { ar: 'ما في مثال من الحياة. في طلاب بدهم يشوفوا وين بنستعمل الفكرة.', en: 'No real-life example yet. Some kids need to see where the idea is used.' },
   tip_nochallenge: { ar: 'ما في تحدٍّ للطالب السريع. بيزهق إذا ضلّينا عالأساسيات.', en: 'No challenge for a fast learner. They get bored on the basics.' },
   classToday: { ar: 'صفّك اليوم', en: 'Your class today' },
+  classChange: { ar: 'غيّر', en: 'Change' },
+  classDone: { ar: 'تمّ', en: 'Done' },
+  classSize: { ar: 'عدد الطلاب', en: 'Class size' },
+  classGroup: { ar: 'الصف', en: 'Class' },
+  classEnglish: { ar: 'الطلاب بيخلطوا كلمات إنجليزي مع العربي', en: 'Kids mix English words into Arabic' },
+  classExam: { ar: 'تركيز عالي على الامتحان', en: 'Exam focus: high' },
+  classNote: { ar: 'الإعدادات بتغيّر ظروف الصف، مش قدرات الطلاب.', en: "Settings change the room, not the kids' abilities." },
+  classLocked: { ar: 'وضع العرض: الصف الافتراضي', en: 'Stage mode: the default class' },
+  backRowLabel: { ar: 'آخر الصف · {size} طالب', en: 'Back of the class · {size} students' },
+  reviewBackDrift: { ar: 'آخر الصف: بدأ يتلهّى بالمداخلات {turns}', en: 'Back of the class: drifted in turns {turns}' },
+  reviewBackStayed: { ar: 'آخر الصف: ظلّ معك', en: 'Back of the class: stayed with you' },
+  reviewShownNotScored: { ar: 'للعرض فقط، ما بتأثر على العلامة', en: 'Shown, not scored' },
+  reviewClassWord: { ar: 'الصف', en: 'Class' },
+  linaUnheard_alt: { ar: '{name} ما حكى ولا كلمة', en: "{name} hasn't said a word" },
+  m_lina_alt: { ar: 'إشراك الطالب الهادئ ({name})', en: 'Included the quiet learner ({name})' },
+  m_yazan_alt: { ar: 'تحدّي الطالبة المتقدّمة ({name})', en: 'Stretched the fast learner ({name})' },
+  persona_omar_alt: { ar: 'واثقة من نفسها، وإيدها دايمًا مرفوعة', en: 'Confident, hand always up' },
+  persona_lina_alt: { ar: 'خجول، بيجاوب لما تناديه باسمه', en: 'Shy, answers when called by name' },
+  persona_sara_alt: { ar: 'حرفي، دايمًا بيسأل: بس ليش؟', en: 'Literal, always asks “but why?”' },
+  persona_khaled_alt: { ar: 'عملية، بدها أمثلة من الحياة', en: 'Practical, wants real-life examples' },
+  persona_yazan_alt: { ar: 'سريعة التعلّم، بتزهق بدون تحدٍّ', en: 'Fast learner, bored without a challenge' },
   persona_omar: { ar: 'واثق من نفسه، وإيده دايمًا مرفوعة', en: 'Confident, hand always up' },
   persona_lina: { ar: 'خجولة، بتجاوب لما تناديها باسمها', en: 'Shy, answers when called by name' },
   persona_sara: { ar: 'حرفية، دايمًا بتسأل: بس ليش؟', en: 'Literal, always asks “but why?”' },
@@ -202,3 +224,17 @@ const nf = (lang: Lang) => new Intl.NumberFormat(lang === 'ar' ? 'ar-JO-u-nu-lat
 export const fmtNum = (n: number, lang: Lang) => nf(lang).format(n);
 export const mmss = (sec: number) => `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, '0')}`;
 export const westernDigits = (s: string) => s.replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
+
+// ---- copy that names a kid: the default class keeps the original wording; another class swaps name and grammar ----
+const NATIVE_GENDER: Record<KidId, 'm' | 'f'> = { omar: 'm', lina: 'f', sara: 'f', khaled: 'm', yazan: 'm' };
+const altOf = (role: KidId, s: ClassSetting) => kidIdentity(role, s).gender !== NATIVE_GENDER[role];
+export const personaFor = (role: KidId, s: ClassSetting, lang: Lang) => tr((altOf(role, s) ? `persona_${role}_alt` : `persona_${role}`) as Key, lang);
+export function linaUnheardText(s: ClassSetting, lang: Lang) {
+  const who = kidIdentity('lina', s);
+  return who.name.en === 'Lina' ? tr('linaUnheard', lang) : trf('linaUnheard_alt', lang, { name: who.name[lang] });
+}
+export function moveLabel(key: 'lina' | 'yazan', s: ClassSetting, lang: Lang) {
+  const who = kidIdentity(key, s);
+  const def = key === 'lina' ? 'Lina' : 'Yazan';
+  return who.name.en === def ? tr(`m_${key}` as Key, lang) : trf(`m_${key}_alt` as Key, lang, { name: who.name[lang] });
+}

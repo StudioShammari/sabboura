@@ -2,19 +2,21 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useParams } from 'wouter';
 import confetti from 'canvas-confetti';
 import { Keyboard, RotateCcw, Square as StopIcon, Send, X } from 'lucide-react';
-import { KID_IDS, demoScript, kidById, topicById, type KidId, type Level, type Levels } from '@shared/data';
+import { KID_IDS, demoScript, topicById, type KidId, type Level, type Levels } from '@shared/data';
+import { BACK_ROW_LABEL, DEFAULT_SETTING, DIALS, isLarge, kidName, normalizeSetting, type ClassSetting } from '@shared/setting';
 import type { KidChange, LineEvent, StateEvent, TimingsEvent } from '@shared/schemas';
 import { Board, type Mark } from '@/components/Board';
 import { KidCard, type CardView } from '@/components/KidCard';
 import { Ledge, type Caption } from '@/components/Ledge';
 import { MicButton } from '@/components/MicButton';
 import { DebugPanel } from '@/components/DebugPanel';
-import { fmtNum, useT, tr, type Key } from '@/i18n';
+import { fmtNum, useT, tr, trf, type Key } from '@/i18n';
+import { SettingProvider } from '@/lib/classSetting';
 import { endLesson, getLesson, redoTurn, transcribe } from '@/lib/api';
 import type { Plan } from '@shared/plan';
 import { closeMic, fadeOutAll, getMic, micName, openMic, preloadLesson, unlockAudio } from '@/lib/audio';
 import { Recorder } from '@/lib/recorder';
-import { sfx } from '@/lib/sfx';
+import { sfx, setMurmur } from '@/lib/sfx';
 import { getSettings, setSettings, useSettings } from '@/lib/store';
 import { playChorus, playLocalFailsafe, playQuestion, playTurn, type TurnUI } from '@/lib/turnPlayer';
 
@@ -36,6 +38,10 @@ export default function Classroom() {
   const [planOpen, setPlanOpen] = useState(false);
   const [levels, setLevels] = useState<Levels>({ omar: 0, lina: 0, sara: 0, khaled: 0, yazan: 0 });
   const [turnNo, setTurnNo] = useState(0);
+  // the class conditions of this lesson (stage mode always runs the default class)
+  const [setting, setSetting] = useState<ClassSetting>(DEFAULT_SETTING);
+  const settingRef = useRef(setting);
+  const [backRow, setBackRow] = useState(0);
   const [phase, setPhase] = useState<Phase>('idle');
   const [views, setViews] = useState<Partial<Record<KidId, CardView>>>({});
   const [transcript, setTranscript] = useState('');
@@ -93,6 +99,8 @@ export default function Classroom() {
     getLesson(id).then((l) => {
       if (!alive) return;
       setSettings({ lang: l.lesson.language, title: l.lesson.teacherTitle, topicId: l.lesson.topicId });
+      const ls = demo ? DEFAULT_SETTING : normalizeSetting(l.lesson.setting);
+      settingRef.current = ls; setSetting(ls); setBackRow(l.backRow ?? 0);
       setLv(l.levels); setTurnNo(l.turnNo); turnNoRef.current = l.turnNo;
       const last = l.turns[l.turns.length - 1];
       if (last) setTranscript(last.transcript);
@@ -144,6 +152,7 @@ export default function Classroom() {
     onState: (ev: StateEvent) => {
       if (genRef.current !== gen) return;
       setTurnNo(ev.turnNo); turnNoRef.current = ev.turnNo;
+      if (ev.backRow !== undefined) setBackRow(ev.backRow);
       const speakers = new Map(ev.speakers.map((s) => [s.kid, s.reason]));
       // evidence highlights
       const byText = new Map<string, KidId[]>();
@@ -226,14 +235,14 @@ export default function Classroom() {
     patchAll({ thinking: true, hand: false, raised: false, speaking: false, dim: false, asked: false });
     if (unlockTimer.current) clearTimeout(unlockTimer.current);
     unlockTimer.current = setTimeout(() => { if (phaseRef.current === 'processing' && genRef.current === gen) setPhaseBoth('playing'); }, 12000);
-    await playTurn({ lessonId: id, text, source, seconds, lang: getSettings().lang, title: getSettings().title, ui: makeUI(gen), setAbort: (f) => (abortRef.current = f) });
+    await playTurn({ lessonId: id, text, source, seconds, lang: getSettings().lang, title: getSettings().title, ui: makeUI(gen), setAbort: (f) => (abortRef.current = f), setting: settingRef.current });
   }, [id, makeUI, patchAll]);
 
   const localFailsafe = useCallback(async () => {
     const gen = ++genRef.current;
     setPhaseBoth('processing');
     const ui = makeUI(gen);
-    await playLocalFailsafe(getSettings().lang, ui);
+    await playLocalFailsafe(getSettings().lang, ui, 'omar', settingRef.current);
     ui.onDone();
   }, [makeUI]);
 
@@ -244,7 +253,7 @@ export default function Classroom() {
     setPhaseBoth('processing'); setCaption(null); setPopKid(null);
     patchAll({ raised: false, hand: false, speaking: false, dim: false });
     await unlockAudio();
-    await playQuestion({ lessonId: id, kid, lang: getSettings().lang, ui: makeUI(gen), setAbort: (f) => (abortRef.current = f) });
+    await playQuestion({ lessonId: id, kid, lang: getSettings().lang, ui: makeUI(gen), setAbort: (f) => (abortRef.current = f), setting: settingRef.current });
   }, [id, makeUI, patchAll]);
 
   const anyRaised = KID_IDS.some((k) => views[k]?.raised);
@@ -254,8 +263,8 @@ export default function Classroom() {
       const t = setTimeout(() => patchAll({ raised: false }), 15000);
       return () => clearTimeout(t);
     }
-    // Never before the teacher has spoken, and at most one hand every other turn.
-    if (turnNo < 1 || turnNo - lastRaisedTurn.current < 2) return;
+    // Never before the teacher has spoken, and at most one hand every other turn (every third in a large class).
+    if (turnNo < 1 || turnNo - lastRaisedTurn.current < DIALS.handEveryTurns[isLarge(setting) ? 'large' : 'normal']) return;
     const t = setTimeout(() => {
       const lv = levelsRef.current;
       const lost = KID_IDS.filter((k) => (k === 'yazan' ? lv.yazan === 0 : lv[k] === 0));
@@ -270,7 +279,11 @@ export default function Classroom() {
       sfx.badgeUp();
     }, 12000 + Math.random() * 6000);
     return () => clearTimeout(t);
-  }, [ready, needTap, demo, phase, anyRaised, turnNo, patchAll, patchView]);
+  }, [ready, needTap, demo, phase, anyRaised, turnNo, patchAll, patchView, setting]);
+
+  // the back of a large class: a soft murmur once it starts drifting
+  useEffect(() => { if (!demo && isLarge(setting)) setMurmur(backRow); else setMurmur(0); }, [backRow, setting, demo]);
+  useEffect(() => () => setMurmur(0), []);
 
   // ---------- mic ----------
   const micError = (e: unknown) => {
@@ -433,6 +446,7 @@ export default function Classroom() {
     try {
       const r = await redoTurn(id);
       setLv(r.levels); setTurnNo(r.turnNo); turnNoRef.current = r.turnNo;
+      if (isLarge(settingRef.current)) getLesson(id).then((l) => setBackRow(l.backRow ?? 0)).catch(() => {});
       tallyHist.current.length = r.turnNo + 1; lastRaisedTurn.current = -2;
       setTally(tallyHist.current[r.turnNo] ?? 0);
       setTranscript(''); setMarks([]); setViews({});
@@ -461,7 +475,7 @@ export default function Classroom() {
     const gen = ++genRef.current;
     const ui = makeUI(gen);
     await unlockAudio();
-    await playChorus(getSettings().lang, getSettings().title, ui);
+    await playChorus(getSettings().lang, getSettings().title, ui, settingRef.current);
   };
   const sendScript = async (n: number) => {
     const line = demoScript.find((l) => l.n === n);
@@ -498,6 +512,7 @@ export default function Classroom() {
   const stamp = lang === 'ar' ? 'الصف فهم!' : 'Class got it!';
 
   return (
+    <SettingProvider value={setting}>
     <main className={`classroom ${stage ? 'stage' : ''} ${hideCursor ? 'stage-hide-cursor' : ''} ${typing ? 'typing' : ''}`} dir={lang === 'ar' ? 'rtl' : 'ltr'}>
       <header className="topbar">
         <a className="logo" href="/" onClick={(e) => { e.preventDefault(); if (turnNo > 0) setConfirmEnd(true); else nav('/'); }}>{lang === 'ar' ? 'سبّورة' : 'Sabboura'}</a>
@@ -535,6 +550,13 @@ export default function Classroom() {
           )}
         </Board>
         <Ledge lang={lang} cap={caption} subtitles={subtitles} />
+        {!stage && isLarge(setting) && (
+          <div className={`back-row lv${backRow}`} role="status" aria-live="polite">
+            <span className="br-label">{trf('backRowLabel', lang, { size: setting.size })}</span>
+            <span className="br-pips" aria-hidden="true">{[0, 1, 2, 3].map((i) => <i key={i} className={i <= backRow ? 'on' : ''} />)}</span>
+            <b className="br-state">{BACK_ROW_LABEL[Math.min(3, Math.max(0, backRow))][lang]}</b>
+          </div>
+        )}
       </section>
 
       <section className="class-row">
@@ -542,7 +564,7 @@ export default function Classroom() {
           <KidCard key={k} kid={k} level={levels[k] as Level} lang={lang} view={views[k] ?? {}} onBadge={() => setPopKid(popKid === k ? null : k)} onCallOn={() => void callOn(k)}
             popover={popKid === k && (
               <div className="popover" role="dialog">
-                <b>{tr('whatMoved', lang)} {kidById(k).name[lang]}</b>
+                <b>{tr('whatMoved', lang)} {kidName(k, lang, setting)}</b>
                 <div className="q">{evidRef.current[k] ? <>«{evidRef.current[k]!.text}»</> : tr('nothingYet', lang)}</div>
               </div>
             )} />
@@ -619,5 +641,6 @@ export default function Classroom() {
       {debugOpen && <DebugPanel lessonId={id} timings={lastTimings} log={eventLog} onClose={() => setDebugOpen(false)} />}
       <span className="sr-only" aria-live="polite">{caption?.text}</span>
     </main>
+    </SettingProvider>
   );
 }

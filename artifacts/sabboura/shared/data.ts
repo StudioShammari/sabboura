@@ -75,9 +75,10 @@ export const addressTerm = (lang: Lang, title: Title) =>
 export const chorusFor = (lang: Lang, title: Title) => chorusText[`${lang}_${title === 'miss' ? 'miss' : 'sir'}`];
 export const expandT = (s: string, lang: Lang, title: Title) => s.replaceAll('{t}', addressTerm(lang, title));
 
-export function badgeLabel(kid: KidId, level: Level, lang: Lang): string {
+/** `gender` is the displayed kid's gender (a class setting can change it); the role's own gender is the default. */
+export function badgeLabel(kid: KidId, level: Level, lang: Lang, gender?: 'm' | 'f'): string {
   const def = kidById(kid);
   const set = labels[def.labels];
   if (lang === 'en') return set.en[level];
-  return (def.gender === 'f' ? set.ar_f : set.ar_m)[level];
+  return ((gender ?? def.gender) === 'f' ? set.ar_f : set.ar_m)[level];
 }

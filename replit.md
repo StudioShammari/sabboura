@@ -18,3 +18,4 @@ A flight simulator for teachers: practise a lesson on a class of five AI kids. F
 12) Uploaded files (PDF, photo, pasted text) are never stored or written to disk. Keep only the generated pack JSON in the `packs` table.
 13) The plan checklist never changes the score. It runs beside the scorer and only reports.
 14) Never show which kid holds which mistake before the end reveal. The Plan page shows nameless quotes and personality lines only.
+15) Class settings change conditions only (size, group, language mix, exam focus), never kids' abilities. The default setting stays byte-identical.

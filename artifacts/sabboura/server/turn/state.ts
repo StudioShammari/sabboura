@@ -1,6 +1,7 @@
 import { asc, eq } from 'drizzle-orm';
 import { registerTopic, startLevels, type TopicDef, type KidId, type Lang, type Levels, type Title } from '../../shared/data';
 import { db, kidLines, lessons, turns } from '../db';
+import { normalizeSetting, type BackTurn, type ClassSetting } from '../../shared/setting';
 
 export interface LessonState {
   id: string;
@@ -23,6 +24,10 @@ export interface LessonState {
   taught: boolean;
   /** Recent lines the kids said, so new lines do not repeat them. */
   kidSaid: { kid: KidId; text: string }[];
+  /** The class conditions this lesson is taught in. */
+  setting: ClassSetting;
+  /** What each finished turn looked like, for the Back of the class (large classes). */
+  hist: BackTurn[];
 }
 
 const mem = new Map<string, LessonState>();
@@ -57,6 +62,8 @@ export async function getState(id: string): Promise<LessonState | null> {
     pendingQuestion: null,
     askedQuestions: [],
     taught: ts.some((t) => (t.judgeJson as { on_topic?: boolean } | null)?.on_topic === true),
+    setting: normalizeSetting(l.settingJson),
+    hist: ts.map((t) => ({ seconds: t.teacherSeconds, check: t.checkType, askedKid: t.askedKid })),
     kidSaid: lines.slice().sort((a, b) => a.turnNo - b.turnNo || a.idx - b.idx).slice(-8).map((x) => ({ kid: x.kidId as KidId, text: x.text })),
   };
   mem.set(id, s);
