@@ -1,2 +1,2 @@
-- [Sabboura project facts](sabboura-project.md) — spec location, architecture, hard rules, env/AI-key state
+- [Sabboura project facts](sabboura-project.md) — spec, architecture, hard rules, env/AI-key state, uploaded-lesson (pack) design
 - [Tooling quirks](tooling-quirks.md) — drizzle-kit flags, no pnpm root, PORT env, no api artifact type

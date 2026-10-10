@@ -1,0 +1,261 @@
+Read this whole message first, then work through Parts 1 → 2 → 3 in order.
+
+Ground rules:
+- Do NOT change the live lesson engine: the turn pipeline, the judge, kid lines, voices, raised hands / call-on, scoring and the test sheet. Everything below is UI fixes plus new screens around the lesson.
+- Database changes are additive only: new tables and new nullable columns.
+- All copy goes in i18n.ts in Arabic (RTL) and English.
+- Status colours stay on kid badges only. No confetti on the review page.
+- After EACH part:
+  - take screenshots at 1280×720 and 1920×1080 (Arabic and English) and at 390×844, and check them against that part's "Done when";
+  - run `pnpm test:judge -- --rows 1,2,3,4,7` to prove nothing broke;
+  - show me both.
+
+## PART 1 — Fix the UI and make it clearer
+
+These are real problems from screenshots of the current app:
+
+1. **Home, class picture:** the picture frame shows only the tops of the kids' heads. Show the whole picture, uncropped, at its own aspect ratio, or show a row of the 5 portraits instead.
+2. **Home, fit:** the page doesn't fit 1280×720 (the Start button is below the fold). Make the headline board shorter and the picture smaller, so the main button is visible without scrolling.
+3. **"Meet the class" modal is broken:**
+   - the letter tiles (ع ل س خ ي) sit above the pictures instead of behind them;
+   - the pictures are at different heights (Yazan is higher);
+   - at 1280×720 the badges and the "Let's start" button are cut off.
+
+   Part 2 replaces this modal. Until then, fix it: use the same avatar component and styles as the classroom cards, an equal-height grid, and max-height 90vh with the buttons always visible.
+4. **Classroom top bar is crowded:** the 4 goal chips squeeze between the class meter and "End lesson". Remove them (Part 2 replaces them with a "My plan" button). Also, the meter says "of 5" with 5 circles, but only Omar, Lina, Sara and Khaled count (the review says "of 4"). Make it "of 4" with 4 circles.
+5. **Empty caption ledge:** it is a blank brown bar until a kid speaks. When it's empty, show a quiet chalk-dim line, "الصف بسمعك… / The class is listening…", so it reads as the caption strip.
+6. **Decor at 1920×1080:** the clock and window float far from the board and look like stray icons. Remove them.
+7. **Dock:** the "Tap mode (tap to start, tap to stop)" checkbox is tiny and jammed next to "Type instead". Move it under the mic as a small, clearly labelled toggle (16px minimum).
+8. **Typing box:** it closes after every typed turn, so the teacher has to reopen it each time. Keep it open and focused until the teacher closes it (Escape or its button).
+9. **Review page:**
+   - The teaching-move names wrap mid-phrase in a narrow column ("Reach every / learner"). Give the label column a minimum width so each name fits on one line, with its "Fixed rules / AI-judged" tag on its own line under it.
+   - The "A line for next time" card has its blue accent border on the wrong side in Arabic. Use border-inline-start.
+   - With 1–2 turns, the replay table stretches one column across the full width. Use fixed-width columns aligned to the start.
+10. **Clarity everywhere:**
+    - one obvious primary button per screen;
+    - no text under 16px, except small tags;
+    - 8px spacing steps;
+    - check RTL mirroring on every screen.
+
+**Done when:** nothing overlaps or is cut off at 1280×720, 1920×1080 or 390×844, in both languages, and every screen except the review page fits 1280×720 without scrolling.
+
+## PART 2 — The lesson in three phases: Plan → Teach → Reflect
+
+Today we only give feedback during and after the lesson. Add a phase before it (an outline helper), and after the lesson show a checklist of what the teacher did and didn't do from their own plan.
+
+### The flow
+
+**Home** changes to:
+- the language and "class calls you" pills first;
+- then two cards:
+  - "ارفع درس بكرا / Upload tomorrow's lesson" (built in Part 3; hide it until then);
+  - "أو جرّب درس جاهز / Or try a ready lesson": the 3 topic pills, with fractions as the default;
+- under the board, a small strip that explains the flow: "1 قبل الحصة · 2 الحصة · 3 بعد الحصة" / "1 Plan · 2 Teach · 3 Reflect";
+- the primary button "التالي: خطّط للحصة / Next: plan the lesson", which opens `/plan/lib-<topicId>`.
+
+**New Plan page `/plan/:packId`:**
+- **Stepper at the top:** "1 قبل الحصة · 2 الحصة · 3 بعد الحصة" / "1 Plan · 2 Teach · 3 Reflect". The current step is bold ink with an underline; never status colours. Show the same stepper (step 3) in the review page header.
+- **Start column:**
+  - **Material card:**
+    - topic title and grade, tagged "من مكتبة سبّورة · مبني على أبحاث / Sabboura library · research-based";
+    - for uploads (Part 3), the file name tagged "مسودّة بالذكاء الاصطناعي، للمراجعة / AI draft, please review";
+    - a "غيّر المادّة / Change material" link back to Home.
+  - **"وين ممكن يتلخبط الطلاب؟ / Where kids may get stuck":** 3 short quotes of what a confused kid says, **with no names**. Under them: "ما رح نقلّك مين. السؤال الحقيقي هو اللي بيكشف. / We won't tell you who. A real question will." Never reveal which kid holds which mistake before the end-of-lesson reveal.
+- **End column, the plan, drawn as a notebook page** (paper with blue rules):
+  - **Goal:** a one-line field.
+  - **Steps (1–6).** Each row has a kind chip (a select), a text field and a delete button, plus "+ أضف خطوة / + Add step". The kinds are:
+    - شرح السبب / Explain why;
+    - مثال / Example;
+    - سؤال تحقق / Check question;
+    - سؤال باسم طالب / Ask by name;
+    - تحدٍّ / Challenge;
+    - خطوة أخرى / Other.
+  - Edits are saved in localStorage per pack (inside try/catch). Add "رجّع المسودّة / Reset plan".
+  - **Plan tips** (code only, at most 2, small ink-muted, in Jordanian dialect for Arabic), in this priority:
+    1. A step contains a yes/no check: «{phrase}» is a yes/no check; a real question needs an answer. Phrases: فاهمين / مفهوم / واضح / تمام / ok / clear / got it followed by ? or ؟; "any questions", "everyone understand", "do you understand" anywhere.
+    2. No check step: "No real check question yet. «فاهمين؟» won't show who is lost."
+    3. Nobody is asked by name.
+    4. No real-life example.
+    5. No challenge for a fast learner.
+- **Class strip "صفّك اليوم / Your class today":** the 5 portraits, each with name and personality line. Never their mistakes. This replaces the Meet the class modal.
+- **Primary button "ابدأ الحصة / Start lesson":**
+  - it does exactly what Home's Start does today (audio unlock, mic permission card and error cards, preload, create the lesson) and also sends the plan;
+  - the classroom then opens without the Meet the class modal;
+  - if the classroom opens with no mic yet (a reload or a direct link), show a small "Tap to start" card instead.
+
+**Classroom:**
+- A small "خطّتي / My plan" pill in the top bar, where the goal chips were. It opens a read-only popover with the goal and the steps. KeyP toggles it.
+- It is hidden in stage mode. Nothing else in the classroom changes.
+
+**Review page:** a new section, "خطّتك مقابل حصّتك / Your plan vs. your lesson", right after the class row (beside the فاهمين؟ panel at 1100px and wider).
+- **Two pills:**
+  - "الخطوات المنفّذة: D من N / Steps done: D of N", plus " · P جزئياً / · P partly" when P > 0;
+  - "وصلهم الشرح: R من 4 / Kids reached: R of 4", where R counts Omar, Lina, Sara and Khaled at level 2.
+- **Insight line** (at most one):
+  - if D ≥ N−1 and R ≤ 2: "Doing the plan isn't the same as reaching the class: {4−R} of 4 kids aren't there yet." / "تنفيذ الخطة شيء، ووصول الشرح شيء آخر: {4−R} من 4 لسّا ما وصلهم.";
+  - if D ≤ N/2 and R ≥ 3: "You reached most of the class even off-plan." / "وصل الشرح لمعظم الصف حتى مع تغيير الخطة."
+- **The goal**, then one row per step:
+
+  | Part of the row | What it shows |
+  |---|---|
+  | Mark | Done: an ink-blue disc with a white ✓. Partly: a half-filled ink-blue ring. Not yet: the grey "ليس بعد / Not yet" chip the move rows already use. While the AI part loads: "Checking…" |
+  | Kind chip | The step's kind |
+  | Step text | What the teacher planned |
+  | "Turn n" chip | Tapping it shows the teacher's exact words |
+  | Next-time line (partly and not yet only) | "المرة القادمة: «…» / Next time: “…”" |
+
+  Use ink and ink-blue only (no status colours). Code rows show at once; AI rows fade in when ready, like the scorer's text.
+- **Buttons:**
+  - Add "عدّل الخطة وأعد الحصة / Edit plan and teach again". It opens the Plan page pre-filled with this lesson's plan.
+  - "Teach it again" keeps the same plan.
+
+### Checklist rules
+
+Put them in `server/plan/checkPlan.ts`. They run at End, in parallel with the scorer. The result is saved on the lesson and **never added to the score**.
+
+**Code rows:**
+- **Check step:**
+  - Done if a turn has checkType "question"; the quote is that turn's transcript.
+  - Otherwise "not yet"; the next-time line is Omar's next_check.
+- **Ask-by-name step:**
+  - Done if a turn has askedKid set and checkType "question".
+  - Partly if askedKid is set with any other check type.
+  - If the step's text names a kid, only that kid counts.
+  - Next time: "{name}، {that kid's next_check}" (Lina if no kid is named).
+- **Challenge step:**
+  - Done if Yazan reached level 2.
+  - Next time: Yazan's next_check.
+- **Repeated kinds** take matching turns in order.
+
+**AI rows: explain, example, other.** One Claude call, using the scorer's model list and the same client helper and rules as the scorer (structured JSON output, no thinking param, no prefill). System prompt, verbatim:
+
+```
+You check a practice lesson against the teacher's own plan, for Sabboura, a teacher-training simulator with AI kids.
+You receive JSON: the lesson language, some plan steps (each with a number, a kind and the teacher's planned text) and the lesson log (each turn's number and the teacher's exact words).
+For EACH step, decide whether the teacher actually did it:
+- evidence: first, copy the teacher's exact words from the ONE turn that best shows the step, or null.
+- turn: that turn's number, or null.
+- status: "done" if the words clearly do what the step says; "partly" if they touch it but are vague or incomplete; "not_yet" if no turn does it.
+- next_time: for "partly" or "not_yet", one sentence (at most 15 words) the teacher could say to the class next time to do this step, in the lesson language; otherwise null.
+Rules: use only the teacher's words; a step counts even if it came in a different order; quote only words that appear in the log; never judge the teacher as a person; in Arabic, write next_time in clear Modern Standard Arabic with light Jordanian warmth. Return only JSON that matches the schema.
+```
+
+- **Schema:** `{steps:[{step:number, evidence:string|null, turn:number|null, status:"done"|"partly"|"not_yet", next_time:string|null}]}`.
+- **Quote check:**
+  - Check every quote against that turn's transcript, with the same Arabic normalisation as the judge's evidence check (≥70% word overlap).
+  - If it fails there, try the other turns.
+  - If none match, set the row to "not yet" and log plan_evidence_mismatch.
+- **Missing next_time:** explain uses Sara's next_check; example uses Khaled's.
+- **If the call fails twice,** those rows show "—".
+
+### Data
+
+- **New nullable lesson columns:** pack_id, topic_json, plan_json, plan_check_json.
+- **POST /api/lessons** accepts `{packId, language, teacherTitle, plan}`. The old `{topicId}` body still works and uses the default plan. The lesson freezes its topic and plan when it is created.
+- **Create data/plans.json** with the default plans for the 3 ready lessons, in ar and en. Each plan has:
+  - an objective;
+  - 5 steps, with kinds explain, example, check, include (ask by name) and challenge;
+  - 3 trouble_spots that match Omar's, Lina's and Sara's misconceptions in topics.json, with no names.
+
+  Use this fractions plan exactly, and write the other two in the same style:
+
+```json
+{"fractions":{"ar":{"objective":"في نهاية الحصة، يستطيع الطلاب مقارنة كسرين مثل 1/2 و1/3 وتفسير أيهما أكبر ولماذا.","steps":[{"kind":"explain","text":"شرح السبب: كلما زاد عدد القطع المتساوية، صغرت كل قطعة."},{"kind":"example","text":"مثال من الحياة: منسف واحد نقسمه على 2، ثم على 3."},{"kind":"check","text":"سؤال تحقق: «أيهما أكبر: نص ولا ثلث؟ ليش؟»"},{"kind":"include","text":"سؤال للينا باسمها، تقدر تجاوبه بكلمتين."},{"kind":"challenge","text":"تحدٍّ ليزن: «أيهما أكبر: 3/4 ولا 4/5؟»"}],"trouble_spots":["«3 أكبر من 2، يعني 1/3 أكبر من 1/2»","«الكسر رقمين: واحد فوق وواحد تحت»","«القاعدة بعرفها، بس ليش؟»"]},"en":{"objective":"By the end, students can compare two fractions like 1/2 and 1/3 and explain which is bigger and why.","steps":[{"kind":"explain","text":"Explain why: the more equal parts, the smaller each part."},{"kind":"example","text":"Real-life example: one mansaf shared by 2 people, then by 3."},{"kind":"check","text":"Check question: “Which is bigger, a half or a third? Why?”"},{"kind":"include","text":"Ask Lina by name: a short question she can answer in two words."},{"kind":"challenge","text":"Challenge Yazan: “Which is bigger, 3/4 or 4/5?”"}],"trouble_spots":["“3 is bigger than 2, so 1/3 is bigger than 1/2.”","“A fraction is two numbers, one on top and one below.”","“I know the rule, but why?”"]}}}
+```
+
+### Stage mode (?demo=1) and tests
+
+- **Stage mode:**
+  - open the Plan page for fractions (Arabic, مس) with the default plan, read-only;
+  - the "Stage ready" check runs there;
+  - Enter or PageDown starts the lesson;
+  - C plays the chorus there too;
+  - N goes back to the Plan page;
+  - keep the mic and audio open across pages;
+  - leave every other hotkey unchanged.
+- **Add `pnpm test:plan`:** run the 4 lines of data/demo-script.json as typed turns on a fresh fractions lesson, then checkPlan. Expected:
+  - explain: done or partly (turn 4);
+  - example: done (turn 4);
+  - check: done (turn 3);
+  - include: done (turn 3);
+  - challenge: not yet.
+
+  The score stays about 77.
+
+**Done when:** Home → Comparing fractions → Next → Plan page → Start → the lesson works exactly as before → End → the checklist shows "4 of 5" for the 4 demo lines.
+
+## PART 3 — The teacher uploads their own material
+
+**Upload card on Home:**
+- a drop zone and "choose file" (PDF, JPG, PNG or WebP, 10 MB max);
+- "أو الصق النص / or paste the text" (12,000 characters max);
+- an optional "Pages" field for PDFs (default: the first 6; 6 max);
+- under it: "منقرأ الملف ومنحذفه، ومنحتفظ بالخطة بس. / We read your file, then delete it. We keep only the plan."
+
+**Client:** resize photos so the long edge is at most 2000 px, as JPEG 0.88 (`createImageBitmap(file, {imageOrientation:'from-image'})`).
+
+**Server:**
+- POST /api/packs returns `202 {packId}` at once and runs a background job. GET /api/packs/:id returns `{status:'working'|'ready'|'failed', reason?}`.
+- Check the file type from its first bytes.
+- The pack id is sha1(content|language|pages), so the same file again is instant.
+- Never store or write the file. Keep only the pack JSON, in a new `packs` table.
+- **PDF:** keep the chosen pages with pdf-lib and send them as a Claude document block (base64, application/pdf).
+- **Photo:** send it as an image block.
+- **Text:** send it as a text block.
+- Put the material first, then the instruction.
+
+**The pack call:** one Claude call.
+- Model: env CLAUDE_PACK_MODELS, falling back to the scorer list.
+- `max_tokens` 8000, a 60 s timeout, one retry.
+- The same client rules as the judge (structured output; anyOf for nullable fields).
+- System prompt:
+
+```
+You prepare a practice lesson for Sabboura, a simulator where a teacher practises on five AI kids. You receive the teacher's material for ONE lesson and the lesson language. Write everything the teacher or kids will read in the LESSON LANGUAGE, even if the material is in another language. Base everything on the material; never contradict it.
+- usable: false if it is not a lesson (blank, unreadable, a photo of people, unrelated); then return empty strings, empty arrays and nulls everywhere else.
+- library_topic_id: "fractions" (comparing fractions), "negatives" (negative numbers) or "photosynthesis" ONLY if the material's main idea is exactly that topic, else null. If not null, set kids to null.
+- title (≤6 words), title_en (English, ≤6 words), subject, grade (e.g. "4" or "7-8"), vocab (8–14 key words, comma-separated; for Arabic lessons also the main English terms).
+- objective: one sentence starting "By the end, students can" / "في نهاية الحصة، يستطيع الطلاب".
+- steps: exactly 5, in this order, each ≤18 words and specific to THIS material (its own numbers and examples): explain (the main idea WITH its reason), example (one real-life example or model, Jordanian everyday life where natural), check (one real question that needs an answer, in quotes), include (ask Lina, a quiet student, a short real question by name), challenge (a harder question for Yazan). In Arabic write steps as noun phrases ("شرح السبب: …"، "سؤال تحقق: «…»"), never commands.
+- trouble_spots: exactly 3 short quotes of what a confused kid might say, matching omar's, lina's and sara's misconceptions, in kid language, without names.
+- kids, each one FIXED slot: omar = the most common misconception about the main idea (research-known where possible), held confidently; lina = a second, more basic misconception a shy kid would never say out loud, fixed by making the idea concrete (picture, model, diagram, number line, object, everyday meaning); sara = knows the rule or fact from the material but not WHY; khaled = can't see where it's used in real life; yazan = already understands and needs a harder challenge.
+  For each kid: misconception, helped_if (what the teacher must SAY to fix it, specific enough to check against a transcript), hurt_if (what makes it worse) — these three in ENGLISH; reveal (lesson language, ≤25 words: what the kid thought, then what would have reached them); next_check (lesson language: one question for next lesson, addressed to the kid; in Arabic use Jordanian dialect and the kid's gender: omar, khaled, yazan are boys; lina, sara are girls).
+  Fixed patterns: sara misconception "Memorised <the rule> with no idea why.", helped_if "Gives the REASON (<the reason>), not only the rule.", hurt_if "Says 'just memorise it' or only repeats the rule."; khaled misconception "Can't see why <the topic> matters in real life.", helped_if "Uses a concrete real-life example (<two examples>).", hurt_if "Says it only matters for the exam."; yazan misconception "Already understands. Gets bored when the basics are repeated.", helped_if "Gives a harder challenge (e.g. <one>) or asks him to explain to the class.", hurt_if "Repeats the basics with nothing new."
+No emojis. Return only JSON that matches the schema.
+```
+
+- **Schema:** `{usable, library_topic_id, title, title_en, subject, grade, vocab, objective, steps:[{kind,text}], trouble_spots:[string], kids:{omar,lina,sara,khaled,yazan: {misconception, helped_if, hurt_if, reveal, next_check}} | null}`.
+
+**Build the pack:**
+- **If library_topic_id is set:** use that ready lesson's researched topic and its trouble spots from plans.json, with the AI's plan.
+- **Otherwise:** build a topic in exactly the topics.json shape:
+  - Yazan's start level is 1; the others start at 0;
+  - reveal and next_check go in both the en and ar keys, in the lesson language;
+  - register the topic so topicById() finds it (load uploaded topics from the DB at boot and when a lesson loads);
+  - the client gets the title from the API;
+  - uploaded topics have no canned lines, so fall back to each kid's failsafe line;
+  - the STT prompt uses the uploaded title, grade and vocab;
+  - the judge's on_topic text must not say "fractions" for other topics; make it name the lesson's own topic.
+
+**Progress on Home** (a chalk list):
+1. "عم نقرأ المادّة… / Reading your material…"
+2. "عم ندوّر على اللي بلخبط الطلاب… / Finding what kids get wrong…" (after 10 s)
+3. "عم نجهّز خطة الحصة… / Drafting your lesson plan…"
+
+Add "Usually 20–40 seconds" and a Cancel button. When it's ready, open the Plan page with the "AI draft" tag and a "مسودّة جديدة / New draft" button.
+
+**Errors:** friendly error cards, never raw errors, with "Try another file" and "Use a ready lesson". The cases are: too big, wrong type, unreadable, not a lesson, and took too long.
+
+**Done when:**
+- a photo of a fractions worksheet matches the ready lesson;
+- a 2-page science PDF gives a sensible plan, 3 trouble spots, and kids who react to that topic;
+- a selfie shows "We couldn't find a lesson";
+- uploading the same PDF again is instant.
+
+## FINALLY
+
+- Add 3 rules to replit.md:
+  - (12) uploaded files are never stored;
+  - (13) the plan checklist never changes the score;
+  - (14) never show which kid holds which mistake before the reveal.
+- Add a short "v2: Plan · Teach · Reflect" section to docs/SPEC.md describing the three phases, the checklist rules and the upload, so later prompts know about them.

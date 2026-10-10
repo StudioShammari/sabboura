@@ -3,7 +3,7 @@ import OpenAI from 'openai';
 import { z, type ZodType } from 'zod';
 import { since } from '../lib/timing';
 
-export type Purpose = 'judge' | 'lines' | 'scorer';
+export type Purpose = 'judge' | 'lines' | 'scorer' | 'pack';
 
 export class AIError extends Error {
   constructor(message: string, public retryable: boolean, public status?: number) {
@@ -15,7 +15,10 @@ const env = (k: string) => (process.env[k] ?? '').trim();
 export const csv = (s: string) => s.split(',').map((x) => x.trim()).filter(Boolean);
 
 export const models = {
-  list: (p: Purpose) => csv(env(`CLAUDE_${p.toUpperCase()}_MODELS`)),
+  list: (p: Purpose) => {
+    const own = csv(env(`CLAUDE_${p.toUpperCase()}_MODELS`));
+    return own.length || p !== 'pack' ? own : csv(env('CLAUDE_SCORER_MODELS'));
+  },
   stt: () => env('STT_MODEL') || 'gpt-4o-mini-transcribe',
   tts: () => env('TTS_MODEL') || 'gpt-audio-mini',
   image: () => env('IMAGE_MODEL') || 'gpt-image-2',
@@ -107,6 +110,8 @@ export interface ClaudeCall<T> {
   purpose: Purpose;
   system: string;
   user: string;
+  /** Content blocks sent BEFORE `user` (documents, images, material). */
+  material?: any[];
   jsonSchema: object;
   zod: ZodType<T>;
   maxTokens: number;
@@ -134,7 +139,7 @@ export async function claudeJSON<T>(call: ClaudeCall<T>): Promise<ClaudeResult<T
               model,
               max_tokens: call.maxTokens,
               system,
-              messages: [{ role: 'user', content: call.user }],
+              messages: [{ role: 'user', content: call.material?.length ? [...call.material, { type: 'text', text: call.user }] : call.user }],
               ...modelOpts(model, call.jsonSchema),
             },
             { timeout: call.timeoutMs, signal: call.signal },

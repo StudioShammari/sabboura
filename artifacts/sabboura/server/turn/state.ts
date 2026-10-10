@@ -1,5 +1,5 @@
 import { asc, eq } from 'drizzle-orm';
-import { startLevels, type KidId, type Lang, type Levels, type Title } from '../../shared/data';
+import { registerTopic, startLevels, type TopicDef, type KidId, type Lang, type Levels, type Title } from '../../shared/data';
 import { db, kidLines, lessons, turns } from '../db';
 
 export interface LessonState {
@@ -36,6 +36,7 @@ export async function getState(id: string): Promise<LessonState | null> {
   if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
   const [l] = await db.select().from(lessons).where(eq(lessons.id, id)).limit(1);
   if (!l) return null;
+  if (l.topicJson) registerTopic(l.topicJson as TopicDef);
   const ts = await db.select().from(turns).where(eq(turns.lessonId, id)).orderBy(asc(turns.turnNo));
   const lines = await db.select().from(kidLines).where(eq(kidLines.lessonId, id));
   const last = ts[ts.length - 1];

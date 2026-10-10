@@ -4,7 +4,6 @@ import { KID_IDS, topicById, chorusFor, type KidId, type Level, type Levels, sta
 import { Board } from '@/components/Board';
 import { KidCard, type CardView } from '@/components/KidCard';
 import { Ledge, type Caption } from '@/components/Ledge';
-import { Decor } from '@/components/Decor';
 import { tr, useT } from '@/i18n';
 import { getReplay, type Replay as ReplayData } from '@/lib/api';
 import { decodeUrl, fadeOutAll, playBuffer, unlockAudio } from '@/lib/audio';
@@ -73,7 +72,6 @@ export default function Replay() {
   const turn = data.turns[idx];
   return (
     <main className="classroom" dir={lang === 'ar' ? 'rtl' : 'ltr'} onClick={() => void next()}>
-      <Decor />
       <header className="topbar"><span className="logo">{lang === 'ar' ? 'سبّورة' : 'Sabboura'}</span><div className="center"><b>{tr('replayLabel', lang)}</b><span>{Math.max(idx + 1, 0)}/{data.turns.length}</span></div><span /></header>
       <section className="wall">
         <Board lang={lang} topic={topic.title[lang]} transcript={turn?.transcript ?? ''} marks={[]} tally={tally} hint={false} />

@@ -12,6 +12,10 @@ export const lessons = pgTable('lessons', {
   deviceId: text('device_id'),
   attemptNo: integer('attempt_no').default(1).notNull(),
   previousLessonId: uuid('previous_lesson_id'),
+  packId: text('pack_id'),
+  topicJson: jsonb('topic_json'),
+  planJson: jsonb('plan_json'),
+  planCheckJson: jsonb('plan_check_json'),
 });
 
 export const turns = pgTable(
@@ -68,5 +72,15 @@ export const ttsCache = pgTable('tts_cache', {
   say: text('say'),
   mime: text('mime').default('audio/mpeg'),
   audioB64: text('audio_b64'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+/** Uploaded-material lessons. Only the generated pack JSON is kept; the uploaded file never is. */
+export const packs = pgTable('packs', {
+  id: text('id').primaryKey(),
+  language: text('language').notNull(),
+  status: text('status').notNull(),
+  reason: text('reason'),
+  packJson: jsonb('pack_json'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 });

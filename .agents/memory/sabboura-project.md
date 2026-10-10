@@ -29,3 +29,10 @@ description: Where the spec lives, architecture choices, AI-key state, shared te
 ## Chat vs teaching turns
 - The judge returns `on_topic`. Greetings, hooks ("who likes pizza?") and small talk are off-topic: no level changes, kids speak with reason `chat`, and the lines model gets no topic or misconception for them. Before the first on-topic turn (`taught` false) a called-on kid asks only a curious question about what was said.
 **Why:** kids were answering "who likes pizza?" with fraction questions because the topic and misconceptions were always in the prompt, and the prompt said to use the misconception even if nothing was taught.
+
+## Uploaded lessons (packs)
+- Pack id is `up-<sha1(content|lang|pages)[:20]>` and doubles as the topic id for non-library topics. The pack row (JSON only) lives in `packs`; `lessons.topic_json` freezes the topic. Topics are registered in the mutable `topics` array (`registerTopic`) at boot, on lesson load, and on the client from API replies (`topic` field on lesson, score and replay). `libraryTopics` is the immutable ready-lesson list (Home pills use it).
+- A pack whose material is exactly a library topic reuses that topic and its plans.json trouble spots; the Plan page still tags it "AI draft".
+- The judge on_topic text uses a `{TOPIC}` placeholder filled with the lesson's English title; this is the only intended change to judge text for uploads.
+- "New draft" on the Plan page re-posts the file kept only in tab memory (`fresh=1` skips the cache); with no file in memory it returns Home.
+**Why:** uploads must never be stored (replit.md rule 12) and the live engine had to stay unchanged.

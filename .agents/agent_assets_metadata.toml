@@ -1,0 +1,44 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "ZOougj-P4NCVSxz3feiD9"
+uri = "file://artifacts/sabboura/generated-artifacts/p1-1280.jpg"
+type = "image"
+title = "Part 1 screens, 1280×720"
+description = "Home, Meet the class, classroom, typing box open. Arabic on the left, English on the right."
+logical_id = "5b867b0b-8670-401c-bc0e-b7412f4afb85"
+content_hash = "sha256:b94b01e37a16ecf3c29ba92b9d4f3b63a3d7013d958939ada66950aa0f1c1231"
+size = 328181
+mtime_ms = 1791637841732
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:2e97b30e-7cb5-420e-992f-61305f749ba7/5b867b0b-8670-401c-bc0e-b7412f4afb85/0aaa45a2-48ea-495a-a907-83fecd0882f4"
+storage_version_token = "1791637851150457"
+content_type = "image/jpeg"
+
+[[outputs]]
+id = "JCqWfIvqxjYTxv766Nlfr"
+uri = "file://artifacts/sabboura/generated-artifacts/p2-1280.jpg"
+type = "image"
+title = "Part 2: Home, Plan page, Tap to start (1280×720, ar and en)"
+description = "Rows: Home, Plan page, classroom Tap-to-start card."
+logical_id = "ce2b88c4-e6ce-4b77-9154-77f782dda369"
+content_hash = "sha256:f4ec69e6edb34a82153de98d3aa9c90776bf8f1cd7327078ef581e3fe010a6b8"
+size = 228752
+mtime_ms = 1791639088353
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:2e97b30e-7cb5-420e-992f-61305f749ba7/ce2b88c4-e6ce-4b77-9154-77f782dda369/5c1c111a-09ba-4b9e-a5c3-835b44020621"
+storage_version_token = "1791639097271855"
+content_type = "image/jpeg"
+
+[[outputs]]
+id = "398i3jdwpuM1-MDGaJbpN"
+uri = "file://artifacts/sabboura/generated-artifacts/p3-sheet.jpg"
+type = "image"
+title = "Part 3: upload"
+description = "Home (ar), chalk progress, error card, uploaded plan (ar 1280, en 1920), uploaded lesson in class"
+logical_id = "33044c68-82af-4421-a40e-c7128008c93f"
+content_hash = "sha256:f4576ab19e22274778a9e1bbf1a810367d0cb391a97847b206e7e77db1c46fc1"
+size = 340465
+mtime_ms = 1791640278724
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:2e97b30e-7cb5-420e-992f-61305f749ba7/33044c68-82af-4421-a40e-c7128008c93f/553b7cd0-e24a-4f7c-8849-9768cfbaae63"
+storage_version_token = "1791640288190257"
+content_type = "image/jpeg"

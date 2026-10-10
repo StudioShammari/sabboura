@@ -44,7 +44,18 @@ export const labels = (topicsJson as any).labels as {
   engagement: { en: string[]; ar_m: string[]; ar_f: string[] };
 };
 export const chorusText = (topicsJson as any).chorus as Record<string, string>;
-export const topics = (topicsJson as any).topics as TopicDef[];
+/** Ready (library) lessons. Never changes. */
+export const libraryTopics = [...((topicsJson as any).topics as TopicDef[])];
+/** Library lessons plus uploaded ones registered at runtime (server: boot + lesson load; client: from API replies). */
+export const topics: TopicDef[] = [...libraryTopics];
+export const isLibraryTopic = (id: string) => libraryTopics.some((t) => t.id === id);
+export const registerTopic = (t: TopicDef) => {
+  if (isLibraryTopic(t.id)) return;
+  const i = topics.findIndex((x) => x.id === t.id);
+  if (i >= 0) topics[i] = t; else topics.push(t);
+};
+/** The topic JSON of an uploaded lesson (null for library lessons), to send to the client. */
+export const uploadedTopic = (id: string): TopicDef | null => (isLibraryTopic(id) ? null : topics.find((t) => t.id === id) ?? null);
 export const topicById = (id: string) => topics.find((t) => t.id === id) ?? topics[0];
 export const canned = cannedJson as unknown as {
   starters: Record<string, Partial<Record<KidId, Line>>>;

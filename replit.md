@@ -15,3 +15,6 @@ A flight simulator for teachers: practise a lesson on a class of five AI kids. F
 9) Arabic: letter-spacing 0, Western digits, signed numbers and maths in <bdi dir="ltr">.
 10) Status colours only on kid badges (SPEC B1.1). No confetti on the review page.
 11) The /turn route streams SSE and is read with fetch + a stream reader; don't replace it with a generated hook or EventSource.
+12) Uploaded files (PDF, photo, pasted text) are never stored or written to disk. Keep only the generated pack JSON in the `packs` table.
+13) The plan checklist never changes the score. It runs beside the scorer and only reports.
+14) Never show which kid holds which mistake before the end reveal. The Plan page shows nameless quotes and personality lines only.

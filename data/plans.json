@@ -1,0 +1,188 @@
+{
+ "fractions": {
+  "ar": {
+   "objective": "في نهاية الحصة، يستطيع الطلاب مقارنة كسرين مثل 1/2 و1/3 وتفسير أيهما أكبر ولماذا.",
+   "steps": [
+    {
+     "kind": "explain",
+     "text": "شرح السبب: كلما زاد عدد القطع المتساوية، صغرت كل قطعة."
+    },
+    {
+     "kind": "example",
+     "text": "مثال من الحياة: منسف واحد نقسمه على 2، ثم على 3."
+    },
+    {
+     "kind": "check",
+     "text": "سؤال تحقق: «أيهما أكبر: نص ولا ثلث؟ ليش؟»"
+    },
+    {
+     "kind": "include",
+     "text": "سؤال للينا باسمها، تقدر تجاوبه بكلمتين."
+    },
+    {
+     "kind": "challenge",
+     "text": "تحدٍّ ليزن: «أيهما أكبر: 3/4 ولا 4/5؟»"
+    }
+   ],
+   "trouble_spots": [
+    "«3 أكبر من 2، يعني 1/3 أكبر من 1/2»",
+    "«الكسر رقمين: واحد فوق وواحد تحت»",
+    "«القاعدة بعرفها، بس ليش؟»"
+   ]
+  },
+  "en": {
+   "objective": "By the end, students can compare two fractions like 1/2 and 1/3 and explain which is bigger and why.",
+   "steps": [
+    {
+     "kind": "explain",
+     "text": "Explain why: the more equal parts, the smaller each part."
+    },
+    {
+     "kind": "example",
+     "text": "Real-life example: one mansaf shared by 2 people, then by 3."
+    },
+    {
+     "kind": "check",
+     "text": "Check question: “Which is bigger, a half or a third? Why?”"
+    },
+    {
+     "kind": "include",
+     "text": "Ask Lina by name: a short question she can answer in two words."
+    },
+    {
+     "kind": "challenge",
+     "text": "Challenge Yazan: “Which is bigger, 3/4 or 4/5?”"
+    }
+   ],
+   "trouble_spots": [
+    "“3 is bigger than 2, so 1/3 is bigger than 1/2.”",
+    "“A fraction is two numbers, one on top and one below.”",
+    "“I know the rule, but why?”"
+   ]
+  }
+ },
+ "negatives": {
+  "ar": {
+   "objective": "في نهاية الحصة، يستطيع الطلاب ترتيب أعداد سالبة مثل −5 و−2 وتفسير أيهما أكبر ولماذا.",
+   "steps": [
+    {
+     "kind": "explain",
+     "text": "شرح السبب: كلما ابتعد العدد السالب عن الصفر، صار أصغر."
+    },
+    {
+     "kind": "example",
+     "text": "مثال من الحياة: حرارة عمّان بالشتي، −2 ثم −5 درجة. أيهما أبرد؟"
+    },
+    {
+     "kind": "check",
+     "text": "سؤال تحقق: «أيهما أكبر: −5 ولا −2؟ ليش؟»"
+    },
+    {
+     "kind": "include",
+     "text": "سؤال للينا باسمها: «وين بتشوفي عدد سالب بالحياة؟»"
+    },
+    {
+     "kind": "challenge",
+     "text": "تحدٍّ ليزن: «قديش −3 − (−7)؟ وضّحها على خط الأعداد.»"
+    }
+   ],
+   "trouble_spots": [
+    "«5 أكبر من 2، يعني −5 أكبر من −2»",
+    "«الأعداد السالبة مش أعداد حقيقية»",
+    "«ناقص دايمًا ناقص، يعني 3 − (−2) = 1»"
+   ]
+  },
+  "en": {
+   "objective": "By the end, students can order negative numbers like -5 and -2 and explain which is bigger and why.",
+   "steps": [
+    {
+     "kind": "explain",
+     "text": "Explain why: the further a negative number is from zero, the smaller it is."
+    },
+    {
+     "kind": "example",
+     "text": "Real-life example: winter nights in Amman, -2° then -5°. Which is colder?"
+    },
+    {
+     "kind": "check",
+     "text": "Check question: “Which is bigger, -5 or -2? Why?”"
+    },
+    {
+     "kind": "include",
+     "text": "Ask Lina by name: “Where do you see a negative number in real life?”"
+    },
+    {
+     "kind": "challenge",
+     "text": "Challenge Yazan: “What is -3 - (-7)? Show it on a number line.”"
+    }
+   ],
+   "trouble_spots": [
+    "“5 is bigger than 2, so -5 is bigger than -2.”",
+    "“Negative numbers aren’t real numbers.”",
+    "“Minus is always minus, so 3 - (-2) = 1.”"
+   ]
+  }
+ },
+ "photosynthesis": {
+  "ar": {
+   "objective": "في نهاية الحصة، يستطيع الطلاب تفسير كيف تصنع النبتة غذاءها من الضوء والماء وثاني أكسيد الكربون.",
+   "steps": [
+    {
+     "kind": "explain",
+     "text": "شرح السبب: النبتة تصنع غذاءها من الضوء والماء وثاني أكسيد الكربون، مش من التراب."
+    },
+    {
+     "kind": "example",
+     "text": "مثال من الحياة: شجرة زيتون وزنها 500 كيلو، ومعظم وزنها من الهوا والماء."
+    },
+    {
+     "kind": "check",
+     "text": "سؤال تحقق: «من وين إجا معظم وزن الشجرة؟ ليش؟»"
+    },
+    {
+     "kind": "include",
+     "text": "سؤال للينا باسمها، تقدر تجاوبه بكلمتين: «النبتة بتتنفس بالليل؟»"
+    },
+    {
+     "kind": "challenge",
+     "text": "تحدٍّ ليزن: «ليش النبتة بتموت بغرفة معتمة حتى لو في مي وتراب؟»"
+    }
+   ],
+   "trouble_spots": [
+    "«النبتة بتاكل من التراب»",
+    "«النبتة ما بتتنفس، التنفس للإنسان بس»",
+    "«النبتة بتتنفس ثاني أكسيد الكربون بدل الأكسجين، يعني هاد هو التنفس»"
+   ]
+  },
+  "en": {
+   "objective": "By the end, students can explain how a plant makes its own food from light, water and carbon dioxide.",
+   "steps": [
+    {
+     "kind": "explain",
+     "text": "Explain why: a plant makes its food from light, water and carbon dioxide, not from soil."
+    },
+    {
+     "kind": "example",
+     "text": "Real-life example: a 500 kg olive tree gets most of its mass from air and water."
+    },
+    {
+     "kind": "check",
+     "text": "Check question: “Where did most of the tree’s mass come from? Why?”"
+    },
+    {
+     "kind": "include",
+     "text": "Ask Lina by name: “Does a plant breathe at night?” She can answer in two words."
+    },
+    {
+     "kind": "challenge",
+     "text": "Challenge Yazan: “Why does a plant in a dark room die even with water and soil?”"
+    }
+   ],
+   "trouble_spots": [
+    "“Plants eat from the soil.”",
+    "“Plants don’t breathe, only people do.”",
+    "“A plant breathes in carbon dioxide instead of oxygen. That is breathing.”"
+   ]
+  }
+ }
+}

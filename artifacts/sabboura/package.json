@@ -10,6 +10,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "db:push": "drizzle-kit push --config drizzle.config.ts",
     "test:judge": "tsx scripts/test-judge.ts",
+    "test:plan": "tsx scripts/test-plan.ts",
     "gen:audio": "tsx scripts/gen-audio.ts",
     "gen:avatars": "tsx scripts/gen-avatars.ts",
     "bench": "tsx scripts/bench.ts"
@@ -23,6 +24,7 @@
     "motion": "^14.1.0",
     "multer": "^2.4.0",
     "openai": "^7.32.0",
+    "pdf-lib": "^1.17.1",
     "pg": "^8.23.1",
     "qrcode": "^1.5.4",
     "react": "^19.3.0",

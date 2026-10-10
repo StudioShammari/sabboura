@@ -7,7 +7,9 @@ import { KidAvatar, MiniAvatar } from '@/components/KidAvatar';
 import { StateBall } from '@/components/StateBall';
 import { badgeLabel } from '@shared/data';
 import { fmtNum, mmss, tr, useT } from '@/i18n';
-import { createLesson, getReplay, getScore, type Replay } from '@/lib/api';
+import { createLesson, getPlanCheck, getReplay, getScore, type PlanCheckResp, type Replay } from '@/lib/api';
+import { PlanVsLesson } from '@/components/PlanVsLesson';
+import { Stepper } from '@/components/Stepper';
 import { openMic, unlockAudio } from '@/lib/audio';
 import { sfx } from '@/lib/sfx';
 import { deviceId, setSettings } from '@/lib/store';
@@ -91,11 +93,28 @@ export default function Review() {
   const [sel, setSel] = useState<number | null>(null);
   const [phone, setPhone] = useState(matchMedia('(max-width: 767px)').matches);
   const belled = useRef(false);
+  const [pc, setPc] = useState<PlanCheckResp | null>(null);
 
   useEffect(() => {
     getScore(id).then((s) => { setScore(s); setSettings({ lang: s.language, title: s.teacher_title, topicId: s.topic_id }); }).catch(() => setMissing(true));
     getReplay(id).then(setReplay).catch(() => {});
   }, [id]);
+  // the plan checklist: code rows arrive at once, AI rows later
+  useEffect(() => {
+    if (shared) return;
+    let alive = true; let tries = 0;
+    const poll = async () => {
+      try {
+        const r = await getPlanCheck(id);
+        if (!alive) return;
+        setPc(r);
+        if (r.check?.status === 'done' || !r.plan) return;
+      } catch { if (!alive) return; }
+      if (++tries < 40) setTimeout(poll, 1500);
+    };
+    void poll();
+    return () => { alive = false; };
+  }, [id, shared]);
   useEffect(() => {
     const m = matchMedia('(max-width: 767px)'); const f = () => setPhone(m.matches);
     m.addEventListener('change', f); return () => m.removeEventListener('change', f);
@@ -127,10 +146,11 @@ export default function Review() {
     if (phone) { setFlipped(new Set(KID_IDS)); return; }
     for (const k of REVEAL_ORDER) { setFlipped((s) => new Set(s).add(k)); sfx.flip(); await sleep(150); }
   };
-  const again = async () => {
+  const again = async (keepPlan: boolean) => {
     await unlockAudio();
     try { await openMic(); } catch { /* typing is still possible */ }
-    const r = await createLesson({ topicId: score.topic_id, language: score.language, teacherTitle: score.teacher_title, deviceId: deviceId(), previousLessonId: id });
+    const withPlan = keepPlan && pc?.packId && pc.plan ? { packId: pc.packId, plan: pc.plan } : { topicId: score.topic_id };
+    const r = await createLesson({ ...withPlan, language: score.language, teacherTitle: score.teacher_title, deviceId: deviceId(), previousLessonId: id });
     nav(`/lesson/${r.lessonId}`);
   };
   const share = async () => {
@@ -156,6 +176,7 @@ export default function Review() {
         <span>{t('reviewTitle')} · {topic.title[L]} · {t('practice')} · {t('attempt')} <bdi dir="ltr">{score.attempt_no}</bdi> · <bdi dir="ltr">{score.turns}</bdi> {t('turnsWord')} · <bdi dir="ltr">{mmss(score.seconds)}</bdi></span>
         <a className="logo" style={{ fontSize: '1.1rem' }} href="/" onClick={(e) => { e.preventDefault(); nav('/'); }}>{L === 'ar' ? 'سبّورة' : 'Sabboura'}</a>
       </div>
+      <Stepper current={2} lang={L} />
 
       <section className="panel" aria-label="class">
         <div className={`review-class ${phone && revealed ? 'list' : ''}`}>
@@ -188,22 +209,25 @@ export default function Review() {
           })}
         </div>
         <p className="reached-line">{reachedSentence(L, score.reached, score.partly, fl.yazan as Level)}</p>
-        <button className="btn btn-primary" style={{ fontSize: '1.1rem' }} onClick={() => void reveal()}>{revealed ? t('hideReveal') : t('reveal')}</button>
+        <button className="btn" onClick={() => void reveal()}>{revealed ? t('hideReveal') : t('reveal')}</button>
       </section>
 
-      {yn && (
-        <section className="board-frame ynpanel" aria-label={tr('yesNoTally', L)}>
-          <div className="sentence">{yn.text}</div>
-          {lostKids.length > 0 && <div style={{ marginTop: 8 }}>{lostKids.map((k) => <MiniAvatar key={k} kid={k} size={32} lang={L} />)}</div>}
-          {yn.foot && <div className="foot">{yn.foot}</div>}
-        </section>
-      )}
+      <div className={`review-pair ${yn && pc?.plan && !shared ? 'two' : ''}`}>
+        {yn && (
+          <section className="board-frame ynpanel" aria-label={tr('yesNoTally', L)}>
+            <div className="sentence">{yn.text}</div>
+            {lostKids.length > 0 && <div style={{ marginTop: 8 }}>{lostKids.map((k) => <MiniAvatar key={k} kid={k} size={32} lang={L} />)}</div>}
+            {yn.foot && <div className="foot">{yn.foot}</div>}
+          </section>
+        )}
+        {!shared && pc?.plan && <PlanVsLesson lang={L} plan={pc.plan} check={pc.check} levels={fl} />}
+      </div>
 
       <section className="panel score-grid">
         <div style={{ textAlign: 'center' }}>
           <ScoreRing total={score.total} lang={L} />
           <div style={{ fontFamily: 'var(--f-kid)', fontWeight: 800, fontSize: '1.4rem', margin: '8px 0' }}>{BANDS[L][score.band]}</div>
-          <div style={{ fontSize: '.8rem', color: 'var(--ink-muted)' }}>{sir ? tr('disclaimerSir', L) : tr('disclaimerMiss', L)}</div>
+          <div style={{ fontSize: '.9rem', color: 'var(--ink-muted)' }}>{sir ? tr('disclaimerSir', L) : tr('disclaimerMiss', L)}</div>
         </div>
         <div>
           <h2>{tr('yourMoves', L)}</h2>
@@ -214,7 +238,7 @@ export default function Review() {
                 <Fragment key={m.key}>
                   <button className="move" onClick={() => setOpen(isOpen ? null : m.key)} aria-expanded={isOpen}>
                     <Icon size={22} aria-hidden="true" />
-                    <span>{tr(`m_${m.key}` as 'm_reached', L)}<span className="tagpill">{m.key === 'clarity' ? tr('aiJudged', L) : tr('fixedRules', L)}</span></span>
+                    <span><span className="mv-name">{tr(`m_${m.key}` as 'm_reached', L)}</span><span className="tagpill">{m.key === 'clarity' ? tr('aiJudged', L) : tr('fixedRules', L)}</span></span>
                     <span className="bar"><i style={{ width: `${(m.points / m.max) * 100}%` }} /></span>
                     {m.points === 0 ? <span className="notyet">{tr('notYet', L)}</span> : <bdi dir="ltr" className="num">{m.points}/{m.max}</bdi>}
                   </button>
@@ -296,10 +320,13 @@ export default function Review() {
       <section style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
         {shared
           ? <button className="btn btn-primary" onClick={() => nav('/')}>{tr('tryPractice', L)}</button>
-          : <button className="btn btn-primary" onClick={() => void again()}>{tr('teachAgain', L)}</button>}
+          : <>
+              <button className="btn btn-primary" onClick={() => void again(true)}>{tr('teachAgain', L)}</button>
+              {pc?.packId && pc.plan && <button className="btn" onClick={() => nav(`/plan/${pc.packId}?from=${id}`)}>{tr('editPlanAgain', L)}</button>}
+            </>}
         <button className="btn" onClick={() => void share()}>{copied ? tr('copied', L) : tr('share', L)}</button>
         <button className="btn" onClick={() => setHow(true)}>{tr('howScoring', L)}</button>
-        <span style={{ color: 'var(--ink-muted)', fontWeight: 600, fontSize: '.9rem' }}>{tr('privacyReview', L)}</span>
+        <span style={{ color: 'var(--ink-muted)', fontWeight: 600, fontSize: '1rem' }}>{tr('privacyReview', L)}</span>
       </section>
 
       {how && (

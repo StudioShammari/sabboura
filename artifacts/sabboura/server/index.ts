@@ -4,6 +4,8 @@ import http from 'node:http';
 import { lessonsRouter } from './routes/lessons';
 import { systemRouter } from './routes/system';
 import { shareRouter } from './routes/share';
+import { packsRouter } from './routes/packs';
+import { loadUploadedTopics } from './packs/build';
 import { aiState, hasAnthropic, hasOpenAI, models } from './ai/clients';
 
 const isProd = process.env.NODE_ENV === 'production';
@@ -11,9 +13,11 @@ const port = Number(process.env.PORT || 5000);
 const root = path.resolve(import.meta.dirname, '..');
 
 async function main() {
+  await loadUploadedTopics().catch((e) => console.warn('[packs] boot load failed', e.message));
   const app = express();
   app.disable('x-powered-by');
   app.use(express.json({ limit: '1mb' }));
+  app.use('/api', packsRouter);
   app.use('/api', lessonsRouter);
   app.use('/api', systemRouter);
   app.use(shareRouter);

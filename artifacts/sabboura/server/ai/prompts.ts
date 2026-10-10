@@ -31,7 +31,7 @@ or asks about the topic's ideas (the things in the KID TABLE). Greetings,
 announcing a theme or activity, icebreakers and hooks ("who likes pizza?"),
 small talk, classroom management and praise are on_topic: false, even if
 they mention an object the topic will later use. Mentioning pizza is NOT
-teaching fractions. When on_topic is false, every kid is helped "no",
+teaching {TOPIC}. When on_topic is false, every kid is helped "no",
 hurt false, evidence null.
 
 Return only JSON that matches the schema.`;
@@ -137,7 +137,7 @@ export function judgeSystemFor(topicId: string): string {
     const d = t.kids[k];
     return `- ${k} (${kidById(k).personality}) misconception: ${d.misconception}\n  helped_if: ${d.helped_if}\n  hurt_if: ${d.hurt_if}`;
   }).join('\n');
-  return `${JUDGE_SYSTEM}\n\nTOPIC: ${t.title.en} (${t.title.ar}), grade ${t.grade}\nKID TABLE:\n${table}`;
+  return `${JUDGE_SYSTEM.replace('{TOPIC}', t.title.en.toLowerCase())}\n\nTOPIC: ${t.title.en} (${t.title.ar}), grade ${t.grade}\nKID TABLE:\n${table}`;
 }
 
 export function judgeUser(args: { levels: Levels; latest: string; previous: { turnNo: number; transcript: string }[] }) {

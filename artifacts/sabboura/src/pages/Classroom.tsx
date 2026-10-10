@@ -9,15 +9,14 @@ import { KidCard, type CardView } from '@/components/KidCard';
 import { Ledge, type Caption } from '@/components/Ledge';
 import { MicButton } from '@/components/MicButton';
 import { DebugPanel } from '@/components/DebugPanel';
-import { fmtNum, useT, tr } from '@/i18n';
-import { createLesson, endLesson, getLesson, redoTurn, transcribe, warmup } from '@/lib/api';
+import { fmtNum, useT, tr, type Key } from '@/i18n';
+import { endLesson, getLesson, redoTurn, transcribe } from '@/lib/api';
+import type { Plan } from '@shared/plan';
 import { closeMic, fadeOutAll, getMic, micName, openMic, preloadLesson, unlockAudio } from '@/lib/audio';
 import { Recorder } from '@/lib/recorder';
 import { sfx } from '@/lib/sfx';
-import { deviceId, getSettings, setSettings, useSettings } from '@/lib/store';
+import { getSettings, setSettings, useSettings } from '@/lib/store';
 import { playChorus, playLocalFailsafe, playQuestion, playTurn, type TurnUI } from '@/lib/turnPlayer';
-import { MeetClass, type StageResult } from '@/components/MeetClass';
-import { Decor } from '@/components/Decor';
 
 type Phase = 'idle' | 'recording' | 'processing' | 'playing';
 type Evidence = { turn: number; text: string };
@@ -29,9 +28,12 @@ export default function Classroom() {
   const settings = useSettings();
   const qs = useMemo(() => new URLSearchParams(location.search), []);
   const demo = qs.get('demo') === '1';
+  const typeMode = qs.get('type') === '1';
 
   const [ready, setReady] = useState(false);
-  const [meet, setMeet] = useState(true);
+  const [needTap, setNeedTap] = useState(false);
+  const [plan, setPlan] = useState<Plan | null>(null);
+  const [planOpen, setPlanOpen] = useState(false);
   const [levels, setLevels] = useState<Levels>({ omar: 0, lina: 0, sara: 0, khaled: 0, yazan: 0 });
   const [turnNo, setTurnNo] = useState(0);
   const [phase, setPhase] = useState<Phase>('idle');
@@ -49,19 +51,18 @@ export default function Classroom() {
   const [micErr, setMicErr] = useState<string | null>(null);
   const [typing, setTyping] = useState(false);
   const [typed, setTyped] = useState('');
+  const typeRef = useRef<HTMLTextAreaElement>(null);
   const [popKid, setPopKid] = useState<KidId | null>(null);
   const [confirmEnd, setConfirmEnd] = useState(false);
   const [ending, setEnding] = useState(false);
   const [stage] = useState(demo);
   const [hud, setHud] = useState(false);
-  const [stageRes, setStageRes] = useState<StageResult | null>(null);
   const [hideCursor, setHideCursor] = useState(false);
   const [inLevel, setInLevel] = useState(0);
   const [subtitles, setSubtitles] = useState(false);
   const [debugOpen, setDebugOpen] = useState(qs.get('debug') === '1');
   const [lastTimings, setLastTimings] = useState<TimingsEvent | null>(null);
   const [eventLog, setEventLog] = useState<string[]>([]);
-  const [questions, setQuestions] = useState(0);
 
   const genRef = useRef(0);
   const abortRef = useRef<() => void>(() => {});
@@ -95,7 +96,9 @@ export default function Classroom() {
       setLv(l.levels); setTurnNo(l.turnNo); turnNoRef.current = l.turnNo;
       const last = l.turns[l.turns.length - 1];
       if (last) setTranscript(last.transcript);
-      setMeet(l.turnNo === 0 && !(demo && getMic()));
+      setPlan(l.lesson.plan);
+      setNeedTap(l.turnNo === 0 && !getMic() && !typeMode);
+      if (typeMode) setTyping(true);
       setReady(true);
     }).catch(() => nav('/'));
     return () => { alive = false; };
@@ -155,7 +158,6 @@ export default function Classroom() {
       setMarks([...byText].map(([text, kids]) => ({ text, kids })));
       if (ev.check === 'yes_no') { setTally((t) => { tallyHist.current[ev.turnNo] = t + 1; return t + 1; }); sfx.tally(); }
       else tallyHist.current[ev.turnNo] = tallyHist.current[ev.turnNo - 1] ?? 0;
-      if (ev.check === 'question') setQuestions((q) => q + 1);
       // apply moves (aha speakers wait for their line)
       for (const k of KID_IDS) {
         const ch = ev.levels[k];
@@ -247,7 +249,7 @@ export default function Classroom() {
 
   const anyRaised = KID_IDS.some((k) => views[k]?.raised);
   useEffect(() => {
-    if (!ready || meet || demo || phase !== 'idle') return;
+    if (!ready || needTap || demo || phase !== 'idle') return;
     if (anyRaised) {
       const t = setTimeout(() => patchAll({ raised: false }), 15000);
       return () => clearTimeout(t);
@@ -268,7 +270,7 @@ export default function Classroom() {
       sfx.badgeUp();
     }, 12000 + Math.random() * 6000);
     return () => clearTimeout(t);
-  }, [ready, meet, demo, phase, anyRaised, turnNo, patchAll, patchView]);
+  }, [ready, needTap, demo, phase, anyRaised, turnNo, patchAll, patchView]);
 
   // ---------- mic ----------
   const micError = (e: unknown) => {
@@ -342,7 +344,8 @@ export default function Classroom() {
   const submitTyped = async () => {
     const text = typed.trim();
     if (!text || phaseRef.current === 'processing' || phaseRef.current === 'recording') return;
-    setTyped(''); setTyping(false);
+    setTyped('');
+    typeRef.current?.focus();
     barge();
     await unlockAudio();
     await submit(text, 'typed', Math.max(2, text.split(/\s+/).length * 0.4));
@@ -357,7 +360,7 @@ export default function Classroom() {
     const toggleRec = () => (phaseRef.current === 'recording' ? void stopRec(false) : void startRec());
     const down = (e: KeyboardEvent) => {
       if (e.code === 'Escape' || e.code === 'F5') return;
-      if (meet || typingInField(e)) return;
+      if (needTap || typingInField(e)) return;
       if (e.code === 'Space') {
         e.preventDefault();
         if (e.repeat || spaceDown.current) return;
@@ -368,6 +371,7 @@ export default function Classroom() {
       else if (demo && e.shiftKey && /^Digit[1-4]$/.test(e.code)) { e.preventDefault(); act.current.script(Number(e.code.slice(5))); }
       else if (e.code === 'KeyF') document.fullscreenElement ? void document.exitFullscreen() : void document.documentElement.requestFullscreen?.().catch(() => {});
       else if (demo && e.code === 'KeyN') act.current.newLesson();
+      else if (!demo && e.code === 'KeyP') setPlanOpen((x) => !x);
       else if (demo && e.code === 'KeyR') act.current.redo();
       else if (demo && e.code === 'KeyE') act.current.end();
       else if (demo && e.code === 'KeyV') act.current.reveal();
@@ -375,7 +379,7 @@ export default function Classroom() {
       else if (demo && e.code === 'KeyS') setSubtitles((x) => !x);
       else if (demo && e.code === 'KeyH') setHud((x) => !x);
       else if (demo && e.code === 'KeyQ') { keepMic.current = true; nav('/pitch'); }
-      else if (!demo && e.code === 'KeyT') setTyping((t) => !t);
+      else if (!demo && e.code === 'KeyT') { e.preventDefault(); setTyping((t) => !t); }
       else if (!demo && e.code === 'KeyE' && turnNoRef.current > 0) setConfirmEnd(true);
       else if (!demo && e.code === 'KeyD') setDebugOpen((d) => !d);
       else if (demo && e.code === 'KeyD' && qs.get('debug') === '1') setDebugOpen((d) => !d);
@@ -388,7 +392,7 @@ export default function Classroom() {
     };
     window.addEventListener('keydown', down); window.addEventListener('keyup', up);
     return () => { window.removeEventListener('keydown', down); window.removeEventListener('keyup', up); };
-  }, [meet, demo, qs, nav, startRec, stopRec]);
+  }, [needTap, demo, qs, nav, startRec, stopRec]);
 
   // Enter confirms, Escape closes the end-lesson dialog
   useEffect(() => {
@@ -431,38 +435,17 @@ export default function Classroom() {
     try { await endLesson(id); } catch { /* score route builds it */ }
     nav(`/lesson/${id}/score`);
   };
-  const begin = async () => {
-    if (demo) {
-      const r: StageResult = { mic: null, audio: null, ai: null, full: null, wake: null };
-      const upd = (k: keyof StageResult, v: boolean) => { r[k] = v; setStageRes({ ...r }); };
-      setStageRes({ ...r });
-      try { await document.documentElement.requestFullscreen(); upd('full', true); } catch { upd('full', false); }
-      try {
-        wake.current = await navigator.wakeLock.request('screen'); upd('wake', true);
-        document.addEventListener('visibilitychange', async () => { if (document.visibilityState === 'visible') try { wake.current = await navigator.wakeLock.request('screen'); } catch { /* ignore */ } });
-      } catch { upd('wake', false); }
-      upd('audio', await unlockAudio());
-      void preloadLesson(settings.topicId, settings.lang, settings.title);
-      upd('mic', await requestMic());
-      try { const w = await warmup(); upd('ai', !!w.ok); } catch { upd('ai', false); }
-      if (Object.values(r).every((v) => v === true)) setTimeout(() => setMeet(false), 4000);
-      return;
-    }
+  const tapStart = async () => {
     await unlockAudio();
     void preloadLesson(settings.topicId, settings.lang, settings.title);
     await requestMic();
-    setMeet(false);
+    setNeedTap(false);
     sfx.bell();
   };
+  const typeInstead = () => { setNeedTap(false); setTyping(true); void unlockAudio(); };
 
-  const newLesson = async () => {
-    const st = getSettings();
-    keepMic.current = true;
-    try {
-      const r = await createLesson({ topicId: st.topicId, language: st.lang, teacherTitle: st.title, deviceId: deviceId() });
-      nav(`/lesson/${r.lessonId}${demo ? '?demo=1' : ''}`);
-    } catch { keepMic.current = false; }
-  };
+  // stage: N goes back to the plan page with the mic and audio kept open
+  const newLesson = () => { keepMic.current = true; nav('/plan/lib-fractions?demo=1'); };
   const chorusOnly = async () => {
     if (phaseRef.current !== 'idle') return;
     const gen = ++genRef.current;
@@ -496,29 +479,37 @@ export default function Classroom() {
 
   if (!ready) return <div className="classroom" />;
 
-  const reached = KID_IDS.filter((k) => levels[k] === 2).length;
+  const counted = KID_IDS.filter((k) => k !== 'yazan');
+  const reached = counted.filter((k) => levels[k] === 2).length;
   const micLabel =
     phase === 'recording' ? (cancelling ? tr('releaseCancel', lang) : recElapsed > 35000 ? tr('tenLeft', lang) : tr('listening', lang))
     : phase === 'processing' ? tr('thinking', lang)
     : settings.tap ? tr('holdTap', lang) : tr('hold', lang);
-  const goals = [
-    { k: 'goalReach', met: reached === 5 },
-    { k: 'goalQs', met: tally + questions >= 2 },
-    { k: 'goalLina', met: levels.lina >= 1 },
-    { k: 'goalYazan', met: levels.yazan === 2 },
-  ] as const;
   const stamp = lang === 'ar' ? 'الصف فهم!' : 'Class got it!';
 
   return (
-    <main className={`classroom ${stage ? 'stage' : ''} ${hideCursor ? 'stage-hide-cursor' : ''}`} dir={lang === 'ar' ? 'rtl' : 'ltr'}>
-      <Decor />
+    <main className={`classroom ${stage ? 'stage' : ''} ${hideCursor ? 'stage-hide-cursor' : ''} ${typing ? 'typing' : ''}`} dir={lang === 'ar' ? 'rtl' : 'ltr'}>
       <header className="topbar">
         <a className="logo" href="/" onClick={(e) => { e.preventDefault(); if (turnNo > 0) setConfirmEnd(true); else nav('/'); }}>{lang === 'ar' ? 'سبّورة' : 'Sabboura'}</a>
         <div className="center">
           <span>{tr('turn', lang)} <bdi dir="ltr" className="num">{fmtNum(turnNo, lang)}</bdi></span>
-          <span className="meter-dots" aria-label={`${reached}/5`}>{KID_IDS.map((k) => <i key={k} className={levels[k] === 2 ? 'on' : ''} />)}</span>
-          <span className="meter-txt">{tr('reachedMeter', lang)} <bdi dir="ltr" className="num">{reached}</bdi> {tr('ofN', lang)} <bdi dir="ltr" className="num">5</bdi></span>
-          <span className="goals">{goals.map((g) => <span key={g.k} className={`chip ${g.met ? 'met' : ''}`}>{g.met ? '✓ ' : ''}{tr(g.k, lang)}</span>)}</span>
+          <span className="meter-dots" aria-label={`${reached}/4`}>{counted.map((k) => <i key={k} className={levels[k] === 2 ? 'on' : ''} />)}</span>
+          <span className="meter-txt">{tr('reachedMeter', lang)} <bdi dir="ltr" className="num">{reached}</bdi> {tr('ofN', lang)} <bdi dir="ltr" className="num">4</bdi></span>
+          {!stage && (
+            <span className="plan-pill-wrap">
+              <button className="chip plan-pill" aria-expanded={planOpen} onClick={() => setPlanOpen((x) => !x)}>{tr('myPlan', lang)}</button>
+              {planOpen && (
+                <div className="plan-pop" role="dialog" aria-label={tr('myPlan', lang)}>
+                  {plan && (plan.goal || plan.steps.length) ? (
+                    <>
+                      {plan.goal && <p className="goal">{plan.goal}</p>}
+                      <ol>{plan.steps.map((st, i) => <li key={i}><span className="tagpill">{tr(`kind_${st.kind}` as Key, lang)}</span> {st.text}</li>)}</ol>
+                    </>
+                  ) : <p>{tr('noPlan', lang)}</p>}
+                </div>
+              )}
+            </span>
+          )}
         </div>
         <button className="btn btn-outline" onClick={() => setConfirmEnd(true)} disabled={turnNo === 0 || ending}><StopIcon size={18} /> <span className="txt">{tr('endLesson', lang)}</span></button>
       </header>
@@ -548,7 +539,7 @@ export default function Classroom() {
         ))}
       </section>
 
-      <footer className="dock">
+      <footer className={`dock ${typing ? 'typing' : ''}`}>
         <div className="side">
           <button className="btn btn-redo" onClick={redo} disabled={phase !== 'idle' || turnNo === 0}><RotateCcw size={18} /> <span className="txt">{tr('redo', lang)}</span></button>
         </div>
@@ -556,23 +547,26 @@ export default function Classroom() {
           <MicButton mode={settings.tap || demo ? 'tap' : 'hold'} recording={phase === 'recording'} cancelling={cancelling} elapsedMs={recElapsed} level={level}
             disabled={phase === 'processing'} label={micLabel} onStart={() => void startRec()} onStop={(c) => void stopRec(c)} onCancelHover={setCancelling} />
           <div className={`mic-label ${phase === 'recording' ? 'rec' : ''}`}>{micLabel}</div>
+          <label className="tap-switch" title={tr('tapModeHint', lang)}><input type="checkbox" checked={settings.tap} onChange={(e) => setSettings({ tap: e.target.checked })} /> <span>{tr('tapMode', lang)}</span></label>
         </div>
-        <div className="side end">
-          <button className="btn btn-type" onClick={() => setTyping((t) => !t)}><Keyboard size={18} /> <span className="txt">{tr('typeBtn', lang)}</span></button>
-          <label className="tap-switch"><input type="checkbox" checked={settings.tap} onChange={(e) => setSettings({ tap: e.target.checked })} /> <span className="txt">{tr('tapMode', lang)}</span></label>
-        </div>
+        {typing ? (
+          <div className="typebox">
+            <textarea ref={typeRef} autoFocus rows={2} value={typed} placeholder={tr('typePlaceholder', lang)} onChange={(e) => setTyped(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void submitTyped(); }
+                else if (e.key === 'Escape') { e.preventDefault(); setTyping(false); }
+              }} />
+            <button className="btn" onClick={() => void submitTyped()} disabled={!typed.trim()}><Send size={18} /> {tr('send', lang)}</button>
+            <button className="btn btn-outline" onClick={() => setTyping(false)} aria-label={tr('close', lang)}><X size={18} /></button>
+          </div>
+        ) : (
+          <div className="side end">
+            <button className="btn btn-type" onClick={() => setTyping(true)}><Keyboard size={18} /> <span className="txt">{tr('typeBtn', lang)}</span></button>
+          </div>
+        )}
       </footer>
-
-      {typing && (
-        <div className="typebox">
-          <textarea autoFocus rows={2} value={typed} placeholder={tr('typePlaceholder', lang)} onChange={(e) => setTyped(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void submitTyped(); } }} />
-          <button className="btn btn-primary" style={{ fontSize: '1rem', padding: '8px 20px' }} onClick={() => void submitTyped()} disabled={!typed.trim()}><Send size={18} /> {tr('send', lang)}</button>
-          <button className="btn btn-outline" onClick={() => setTyping(false)} aria-label={tr('close', lang)}><X size={18} /></button>
-        </div>
-      )}
       {notice && !typing && <div className="notice" role="status">{notice}</div>}
-      {micErr && !meet && (
+      {micErr && !needTap && (
         <div className="mic-card" role="alert">
           <b>{tr(micErr as 'micDenied', lang)}</b>
           <div className="actions" style={{ display: 'flex', gap: 10, marginTop: 10 }}>
@@ -582,7 +576,17 @@ export default function Classroom() {
         </div>
       )}
 
-      {meet && <MeetClass lang={lang} title={settings.title} topicId={settings.topicId} levels={levels} micErr={micErr} onStart={begin} onType={() => { setMeet(false); setTyping(true); void unlockAudio(); }} stageCheck={demo} stageResult={stageRes} onContinue={() => setMeet(false)} />}
+      {needTap && (
+        <div className="mic-card tap-start" role="dialog" aria-modal="true">
+          <b>{tr('tapStartTitle', lang)}</b>
+          <p>{tr('tapStartBody', lang)}</p>
+          {micErr && <p role="alert">{tr(micErr as 'micDenied', lang)}</p>}
+          <div className="actions" style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <button className="btn btn-primary" style={{ fontSize: '1.1rem' }} onClick={() => void tapStart()}>{tr('micAllow', lang)}</button>
+            <button className="btn btn-outline" onClick={typeInstead}>{tr('typeInstead', lang)}</button>
+          </div>
+        </div>
+      )}
 
       {confirmEnd && (
         <div className="modal-back" onClick={() => setConfirmEnd(false)}>

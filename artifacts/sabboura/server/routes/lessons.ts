@@ -2,9 +2,10 @@ import { Router, type Request, type Response } from 'express';
 import multer from 'multer';
 import { and, asc, desc, eq } from 'drizzle-orm';
 import { z } from 'zod';
-import { KID_IDS, startLevels, topics, type KidId, type Lang, type Levels, type Title } from '../../shared/data';
+import { KID_IDS, registerTopic, startLevels, topics, uploadedTopic, type TopicDef, type KidId, type Lang, type Levels, type Title } from '../../shared/data';
 import type { ScoreJson } from '../../shared/schemas';
-import { db, kidLevels, kidLines, lessons, turns } from '../db';
+import { db, kidLevels, kidLines, lessons, packs, turns } from '../db';
+import type { PackInfo } from '../../shared/pack';
 import { transcribe } from '../ai/stt';
 import { scoreWithAI, fallbackFeedback } from '../ai/scorer';
 import { computeScore, withClarity, type TurnRec } from '../rules/score';
@@ -13,12 +14,21 @@ import { runQuestion } from '../turn/runQuestion';
 import { openSSE } from '../turn/sse';
 import { dropState, getState, putState } from '../turn/state';
 import { since, withTimeout } from '../lib/timing';
+import { cleanPlan, defaultPlan, PLAN_KINDS, type Plan, type PlanCheck } from '../../shared/plan';
+import { checkPlanAI, checkPlanCode } from '../plan/checkPlan';
 
 export const lessonsRouter = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 12 * 1024 * 1024 } });
 
+const PlanBody = z.object({
+  goal: z.string().max(600),
+  steps: z.array(z.object({ kind: z.enum(PLAN_KINDS), text: z.string().max(600) })).max(12),
+});
+
 const CreateBody = z.object({
   topicId: z.string().default('fractions'),
+  packId: z.string().max(80).optional(),
+  plan: PlanBody.optional(),
   language: z.enum(['ar', 'en']),
   teacherTitle: z.enum(['miss', 'sir']),
   deviceId: z.string().max(80).optional(),
@@ -29,7 +39,21 @@ lessonsRouter.post('/lessons', async (req, res) => {
   const p = CreateBody.safeParse(req.body);
   if (!p.success) return void res.status(400).json({ error: 'bad request' });
   const b = p.data;
-  const topicId = topics.some((t) => t.id === b.topicId) ? b.topicId : topics[0].id;
+  let wanted = b.packId?.startsWith('lib-') ? b.packId.slice(4) : b.topicId;
+  let topicJson: TopicDef | null = null;
+  let packPlan: Plan | null = null;
+  if (b.packId && !b.packId.startsWith('lib-')) {
+    // an uploaded lesson: the pack decides the topic, and the lesson freezes it
+    const [row] = await db.select().from(packs).where(eq(packs.id, b.packId)).limit(1);
+    const info = row?.status === 'ready' ? (row.packJson as PackInfo) : null;
+    if (!info) return void res.status(404).json({ error: 'pack not ready' });
+    if (info.topic) { registerTopic(info.topic); topicJson = info.topic; wanted = info.topic.id; } else wanted = info.libraryTopicId ?? 'fractions';
+    packPlan = { goal: info.plan.objective, steps: info.plan.steps.map((s) => ({ ...s })) };
+  }
+  const topicId = topics.some((t) => t.id === wanted) ? wanted : topics[0].id;
+  const packId = b.packId ?? `lib-${topicId}`;
+  const given = b.plan ? cleanPlan(b.plan) : null;
+  const plan: Plan = given && given.steps.length ? given : packPlan ?? defaultPlan(topicId, b.language);
   let attemptNo = 1;
   if (b.previousLessonId) {
     const [prev] = await db.select().from(lessons).where(eq(lessons.id, b.previousLessonId)).limit(1);
@@ -37,7 +61,7 @@ lessonsRouter.post('/lessons', async (req, res) => {
   }
   const [l] = await db.insert(lessons).values({
     topicId, language: b.language, teacherTitle: b.teacherTitle, deviceId: b.deviceId ?? null,
-    attemptNo, previousLessonId: b.previousLessonId ?? null,
+    attemptNo, previousLessonId: b.previousLessonId ?? null, packId, planJson: plan, topicJson,
   }).returning();
   const levels = startLevels(topicId);
   putState({
@@ -54,7 +78,8 @@ lessonsRouter.get('/lessons/:id', async (req, res) => {
   const ts = await db.select().from(turns).where(eq(turns.lessonId, s.id)).orderBy(asc(turns.turnNo));
   const ls = await db.select().from(kidLines).where(eq(kidLines.lessonId, s.id)).orderBy(asc(kidLines.turnNo), asc(kidLines.idx));
   res.json({
-    lesson: { id: lesson.id, topicId: lesson.topicId, language: lesson.language, teacherTitle: lesson.teacherTitle, attemptNo: lesson.attemptNo, ended: !!lesson.endedAt },
+    lesson: { id: lesson.id, topicId: lesson.topicId, language: lesson.language, teacherTitle: lesson.teacherTitle, attemptNo: lesson.attemptNo, ended: !!lesson.endedAt, packId: lesson.packId, plan: (lesson.planJson as Plan | null) ?? null },
+    topic: uploadedTopic(lesson.topicId),
     turnNo: s.turnNo,
     levels: s.levels,
     turns: ts.map((t) => ({
@@ -189,9 +214,53 @@ async function buildScore(lessonId: string, force: boolean): Promise<ScoreJson |
   return score;
 }
 
+// ---------------- plan checklist (never part of the score) ----------------
+const planJobs = new Map<string, Promise<void>>();
+
+/** Saves the code rows at once; the AI rows finish in the background. Resolves after the code rows are saved. */
+async function startPlanCheck(lessonId: string): Promise<void> {
+  if (planJobs.has(lessonId)) return;
+  let release: () => void = () => {};
+  const gate = new Promise<void>((r) => { release = r; });
+  const job = (async () => {
+    try {
+      const [l] = await db.select().from(lessons).where(eq(lessons.id, lessonId)).limit(1);
+      if (!l?.planJson) return;
+      const { recs } = await turnRecs(lessonId);
+      const inp = { language: l.language as Lang, topicId: l.topicId, plan: l.planJson as Plan, turns: recs };
+      const code = checkPlanCode(inp);
+      await db.update(lessons).set({ planCheckJson: code }).where(eq(lessons.id, lessonId));
+      release();
+      if (code.status === 'done') return;
+      const full = await checkPlanAI(inp, code, lessonId);
+      await db.update(lessons).set({ planCheckJson: full }).where(eq(lessons.id, lessonId));
+    } catch (e: any) {
+      console.warn('[plan] check failed', String(e?.message ?? e));
+    } finally {
+      release();
+      planJobs.delete(lessonId);
+    }
+  })();
+  planJobs.set(lessonId, job);
+  await gate;
+}
+
+lessonsRouter.get('/lessons/:id/plan-check', async (req, res) => {
+  const id = String(req.params.id);
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return void res.status(404).json({ error: 'not found' });
+  let [l] = await db.select().from(lessons).where(eq(lessons.id, id)).limit(1);
+  if (!l) return void res.status(404).json({ error: 'not found' });
+  const check = l.planCheckJson as PlanCheck | null;
+  if (l.planJson && l.endedAt && (!check || (check.status === 'pending' && !planJobs.has(id)))) {
+    await startPlanCheck(id);
+    [l] = await db.select().from(lessons).where(eq(lessons.id, id)).limit(1);
+  }
+  res.json({ packId: l.packId, plan: l.planJson ?? null, check: (l.planCheckJson as PlanCheck | null) ?? null });
+});
+
 lessonsRouter.post('/lessons/:id/end', async (req, res) => {
   if (!(await getState(String(req.params.id)))) return void res.status(404).json({ error: 'not found' });
-  const score = await buildScore(req.params.id, true);
+  const [score] = await Promise.all([buildScore(req.params.id, true), startPlanCheck(req.params.id)]);
   res.json({ scoreUrl: `/lesson/${req.params.id}/score`, score });
 });
 
@@ -199,7 +268,7 @@ lessonsRouter.get('/lessons/:id/score', async (req, res) => {
   if (!/^[0-9a-f-]{36}$/i.test(req.params.id)) return void res.status(404).json({ error: 'not found' });
   const score = await buildScore(req.params.id, false);
   if (!score) return void res.status(404).json({ error: 'not found' });
-  res.json(score);
+  res.json({ ...score, topic: uploadedTopic(score.topic_id) });
 });
 
 lessonsRouter.get('/lessons/:id/replay', async (req, res) => {
@@ -209,7 +278,7 @@ lessonsRouter.get('/lessons/:id/replay', async (req, res) => {
   const lv = await db.select().from(kidLevels).where(eq(kidLevels.lessonId, s.id));
   const ln = await db.select().from(kidLines).where(eq(kidLines.lessonId, s.id)).orderBy(asc(kidLines.turnNo), asc(kidLines.idx));
   res.json({
-    language: s.language, title: s.title, topicId: s.topicId,
+    language: s.language, title: s.title, topicId: s.topicId, topic: uploadedTopic(s.topicId),
     turns: ts.map((t) => ({
       turnNo: t.turnNo, transcript: t.transcript, chorus: t.chorus, checkType: t.checkType, askedKid: t.askedKid,
       state: Object.fromEntries(KID_IDS.map((k) => {

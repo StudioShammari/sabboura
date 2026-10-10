@@ -3,6 +3,7 @@ import { Route, Switch } from 'wouter';
 import { MotionConfig } from 'motion/react';
 import Home from '@/pages/Home';
 import Classroom from '@/pages/Classroom';
+import Plan from '@/pages/Plan';
 
 const Review = lazy(() => import('@/pages/Review'));
 const DevStates = lazy(() => import('@/pages/DevStates'));
@@ -16,6 +17,7 @@ export default function App() {
       <Suspense fallback={null}>
         <Switch>
           <Route path="/" component={Home} />
+          <Route path="/plan/:packId" component={Plan} />
           <Route path="/lesson/:id/score" component={Review} />
           <Route path="/lesson/:id">{(p) => <Classroom key={p.id} />}</Route>
           <Route path="/dev/states" component={DevStates} />
