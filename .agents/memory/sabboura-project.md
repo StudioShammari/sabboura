@@ -21,3 +21,7 @@ description: Where the spec lives, architecture choices, AI-key state, shared te
 - Kids show faces by state: confused (lost), neutral, happy (got it), eager (hand up); Yazan keeps bored/neutral/happy plus eager. Expression images were made with Replit's built-in image editing from the neutral portraits (allowed by the asset rule).
 - Raised hands: client timer raises one hand about 12-18 s after a teacher turn, never before the first turn and at most every other turn; teacher clicks the kid to call on them; `POST /lessons/:id/call-on` streams one question line. The question is held in memory (`pendingQuestion`) and fed to the next judge and lines call. Not saved to the DB, so review and replay do not show it.
 **Why:** keeps judge, scoring and replay tables unchanged. Spontaneous hands are off in stage mode (`?demo=1`) so the scripted demo timing is not disturbed.
+
+## Kid lines are generated, not scripted
+- The fixed starter objections (and their pre-recorded clips) are now only the fallback when the lines call fails. Every kid reply is generated from the teacher's actual words, earlier teacher turns and the kids' recent lines.
+**Why:** the user said the kids sounded memorized and gave the same answer regardless of what the teacher said. This overrides the spec's fixed-starter behaviour. The cost is live TTS latency on turn 1 instead of an instant pre-recorded clip.

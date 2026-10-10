@@ -2,7 +2,7 @@ import { and, eq } from 'drizzle-orm';
 import { KID_IDS, kidById, type KidId } from '../../shared/data';
 import type { AudioEvent, CheckType, LineEvent, SpeakReason, StateEvent, Speaker, TimingsEvent, TurnEvent } from '../../shared/schemas';
 import { judgeTurn } from '../ai/judge';
-import { failsafeLine, generateLines, starterLine, type OutLine } from '../ai/kidLines';
+import { failsafeLine, generateLines, type OutLine } from '../ai/kidLines';
 import { models } from '../ai/clients';
 import { speak } from '../ai/tts';
 import { db, kidLevels, kidLines, turns } from '../db';
@@ -13,7 +13,6 @@ import { chooseSpeakers, linaUnheard } from '../rules/speakers';
 import type { LessonState } from './state';
 
 export const TURN_BUDGET_MS = 16000;
-const STARTER_KIDS: KidId[] = ['omar', 'sara', 'khaled'];
 
 export interface TurnCtx {
   state: LessonState;
@@ -137,16 +136,13 @@ export async function* runTurn(ctx: TurnCtx): AsyncGenerator<TurnEvent> {
       if (failsafeStage) {
         const f = failsafeLine(s.kid, state.language);
         outLines[i] = { kid: s.kid, reason: s.reason, ...f, source: 'canned' };
-      } else if (s.reason === 'objection' && STARTER_KIDS.includes(s.kid) && !state.startersUsed.has(s.kid)) {
-        const st = starterLine(state.topicId, s.kid, state.language, state.title);
-        if (st) { outLines[i] = { kid: s.kid, reason: s.reason, ...st, source: 'starter' }; return; }
-        needAI.push({ s, i });
       } else needAI.push({ s, i });
     });
     if (needAI.length) {
       const g = await generateLines({
         topicId: state.topicId, lang: state.language, title: state.title,
         transcript: state.pendingQuestion ? `(answering ${kidById(state.pendingQuestion.kid).name.en}'s question "${state.pendingQuestion.text}") ${transcript}` : transcript,
+        context: { teacher: state.last3.map((t) => t.transcript), kids: state.kidSaid },
         signal: ctx.signal,
         speakers: needAI.map((x) => x.s), levels,
       });
@@ -187,7 +183,7 @@ export async function* runTurn(ctx: TurnCtx): AsyncGenerator<TurnEvent> {
     // 8. DB
     const dbr = await dbPromise;
     commitMemory();
-    for (const l of outLines) if (l.source === 'starter') state.startersUsed.add(l.kid);
+    state.kidSaid = [...state.kidSaid, ...outLines.map((l) => ({ kid: l.kid, text: l.text }))].slice(-8);
     timings.dbMs = dbr.ms;
     timings.totalMs = since(T0);
     if (!dbr.ok) yield { event: 'failsafe', data: { stage: 'db', reason: dbr.error, turnNo } };

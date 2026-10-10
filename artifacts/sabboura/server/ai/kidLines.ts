@@ -46,6 +46,8 @@ export async function generateLines(args: {
   speakers: Speaker[];
   levels: Levels;
   avoid?: string[];
+  /** Earlier teacher turns and what the kids already said. */
+  context?: { teacher: string[]; kids: { kid: KidId; text: string }[] };
   signal?: AbortSignal;
 }): Promise<LinesResult> {
   const t0 = performance.now();
@@ -54,6 +56,8 @@ export async function generateLines(args: {
     language: args.lang === 'ar' ? 'Arabic' : 'English',
     teacher_address: addressTerm(args.lang, args.title),
     teacher_said: args.transcript,
+    ...(args.context?.teacher.length ? { earlier_teacher_turns: args.context.teacher } : {}),
+    ...(args.context?.kids.length ? { kids_already_said: args.context.kids.map((k) => `${kidById(k.kid).name.en}: ${k.text}`) } : {}),
     ...(args.avoid?.length ? { avoid: args.avoid } : {}),
     speakers: args.speakers.map((s) => {
       const d = kidById(s.kid);

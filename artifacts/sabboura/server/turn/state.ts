@@ -19,6 +19,8 @@ export interface LessonState {
   /** A kid's raised-hand question the teacher has not answered yet. */
   pendingQuestion: { kid: KidId; text: string } | null;
   askedQuestions: string[];
+  /** Recent lines the kids said, so new lines do not repeat them. */
+  kidSaid: { kid: KidId; text: string }[];
 }
 
 const mem = new Map<string, LessonState>();
@@ -51,6 +53,7 @@ export async function getState(id: string): Promise<LessonState | null> {
     startedAt: l.createdAt.getTime(),
     pendingQuestion: null,
     askedQuestions: [],
+    kidSaid: lines.slice().sort((a, b) => a.turnNo - b.turnNo || a.idx - b.idx).slice(-8).map((x) => ({ kid: x.kidId as KidId, text: x.text })),
   };
   mem.set(id, s);
   return s;
