@@ -166,6 +166,7 @@ export default function Home() {
       <footer className="home-foot">
         {qr && <img src={qr} alt="QR" width={56} height={56} style={{ borderRadius: 8 }} />}
         <span>{tr('privacy', lang)}</span>
+        <a className="text-link" href="/school" onClick={(e) => { e.preventDefault(); nav('/school'); }}>{lang === 'ar' ? 'للمدارس' : 'For schools'}</a>
       </footer>
     </main>
   );

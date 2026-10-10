@@ -580,3 +580,58 @@ table.replay button.sel { border-color: var(--action); }
 .db-rules { max-height: calc(100dvh - 90px); overflow: auto; }
 .db-slider { display: grid; grid-template-columns: 210px minmax(0, 1fr) 52px; gap: 8px; align-items: center; font-size: 13px; }
 .db-slider b { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* ---------- /school: sample-data page for schools (business-dashboard look, same palette and fonts) ---------- */
+.school { max-width: 1120px; margin: 0 auto; padding: 20px 24px 56px; display: grid; gap: 22px; font-size: .9rem; }
+.school .sc-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.school .logo { font-size: 1.3rem; }
+.sc-lang { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; background: #fff; overflow: hidden; }
+.sc-lang button { border: 0; background: transparent; padding: 6px 14px; font-size: .8rem; font-weight: 600; color: var(--ink-muted); min-height: 34px; }
+.sc-lang button[aria-pressed=true] { background: var(--action-dark); color: #fff; }
+.sc-head { display: grid; gap: 6px; justify-items: start; }
+.sc-badge { background: #fff; border: 1px solid var(--action); color: var(--action-dark); border-radius: 999px; padding: 3px 12px; font-size: .75rem; font-weight: 700; }
+.sc-head h1 { font-family: var(--f-ui); font-weight: 700; font-size: clamp(1.5rem, 3vw, 2rem); line-height: 1.3; margin: 4px 0 0; color: var(--action-dark); }
+.sc-head p { margin: 0; color: var(--ink-muted); font-size: .85rem; }
+.sc-card { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; min-width: 0; }
+.sc-card h2, .sc-h2 { font-family: var(--f-ui); font-weight: 700; font-size: 1rem; margin: 0; color: var(--action-dark); }
+.sc-h2 { margin-bottom: 10px; }
+.sc-card h3 { font-family: var(--f-ui); font-weight: 600; font-size: .78rem; margin: 0 0 8px; color: var(--ink-muted); }
+.sc-sub { margin: 2px 0 12px; font-size: .75rem; color: var(--ink-muted); }
+.sc-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.sc-big { font-weight: 700; font-size: 1.9rem; line-height: 1.2; color: var(--action-dark); font-variant-numeric: tabular-nums; }
+.sc-big small { font-size: .8rem; font-weight: 600; color: var(--ink-muted); }
+.sc-note { margin: 6px 0 0; font-size: .78rem; color: var(--ink-muted); line-height: 1.5; }
+.sc-warn { border-top: 3px solid var(--terracotta); }
+.sc-meter { height: 6px; border-radius: 99px; background: #E9EEF6; overflow: hidden; margin-top: 10px; }
+.sc-meter i { display: block; height: 100%; background: var(--action); border-radius: 99px; }
+.sc-two { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 14px; }
+.sc-chart { width: 100%; height: auto; display: block; }
+.sc-grid { stroke: #E3E8F0; stroke-width: 1; }
+.sc-axis { font-size: 11px; fill: var(--ink-muted); font-family: var(--f-ui); }
+.sc-val { font-size: 12px; font-weight: 700; fill: var(--action-dark); font-family: var(--f-ui); }
+.sc-line { fill: none; stroke: var(--action); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+.sc-area { fill: var(--action); opacity: .07; }
+.sc-dot { fill: #fff; stroke: var(--action-dark); stroke-width: 2.5; }
+.sc-bars { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+.sc-bar-label { display: flex; align-items: center; gap: 8px; font-size: .8rem; font-weight: 600; }
+.sc-bar-label > span:not(.mini-tag) { flex: 1; min-width: 0; }
+.sc-bar-label b { color: var(--action-dark); font-variant-numeric: tabular-nums; }
+.sc-bars .sc-meter { margin-top: 6px; height: 8px; }
+.sc-trust ul { list-style: none; margin: 12px 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.sc-trust li { display: flex; gap: 12px; align-items: center; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; font-weight: 600; font-size: .82rem; line-height: 1.45; }
+.sc-trust li svg { flex: none; color: var(--action); }
+.sc-trust-line { margin: 0; font-size: .82rem; color: var(--ink-muted); border-top: 1px solid var(--line); padding-top: 12px; }
+.sc-plans { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.sc-plan { display: grid; gap: 4px; align-content: start; }
+.sc-plan svg { color: var(--action); margin-bottom: 4px; }
+.sc-plan h3 { font-size: .9rem; color: var(--ink); margin: 0; }
+.sc-price { font-weight: 700; font-size: 1.5rem; color: var(--action-dark); margin-top: 6px; }
+.sc-plan p { margin: 0; font-size: .82rem; font-weight: 600; }
+.sc-plan small { color: var(--ink-muted); font-size: .75rem; }
+.sc-cta { display: flex; justify-content: center; }
+.sc-btn { background: var(--action-dark); color: #fff; border: 0; border-radius: 10px; padding: 12px 32px; font-size: 1rem; font-weight: 700; min-height: 48px; }
+.sc-btn:hover { background: var(--action); }
+@media (max-width: 960px) { .sc-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } .sc-two, .sc-plans, .sc-trust ul { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 520px) { .sc-stats { grid-template-columns: minmax(0, 1fr); } .school { padding-inline: 14px; } }
+.home-foot .text-link { font-size: .85rem; font-weight: 500; }
+html:has(.school) body { background-image: none; background-color: #F6F3EC; }

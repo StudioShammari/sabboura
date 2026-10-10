@@ -85,7 +85,7 @@ export const strings = {
   betterIf: { ar: 'سيكون أفضل لو', en: 'Even better if' },
   nextTime: { ar: 'جملة للمرة القادمة', en: 'A line for next time' },
   replayTitle: { ar: 'إعادة عرض الدرس', en: 'Lesson replay' },
-  privacyReview: { ar: 'هذه المراجعة لك وحدك. المدرسة بتشوف أرقام مجمّعة بس.', en: 'This review is yours. A school only sees totals.' },
+  privacyReview: { ar: 'هذه المراجعة إلك. ما حدا بشوفها إلا إذا شاركت الرابط.', en: 'This review is yours. Nobody sees it unless you share the link.' },
   disclaimerMiss: { ar: 'نتيجة لدرس تدريبي واحد، وليست تقييماً لك كمعلّمة.', en: 'A score for one practice lesson, not for you as a teacher.' },
   disclaimerSir: { ar: 'نتيجة لدرس تدريبي واحد، وليست تقييماً لك كمعلّم.', en: 'A score for one practice lesson, not for you as a teacher.' },
   m_reached: { ar: 'الوصول إلى كل طالب', en: 'Reached every learner' },

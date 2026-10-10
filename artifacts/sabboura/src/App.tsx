@@ -8,6 +8,7 @@ import Plan from '@/pages/Plan';
 const Review = lazy(() => import('@/pages/Review'));
 const DevStates = lazy(() => import('@/pages/DevStates'));
 const DevTest = lazy(() => import('@/pages/DevTest'));
+const School = lazy(() => import('@/pages/School'));
 const Pitch = lazy(() => import('@/pages/Pitch'));
 const Replay = lazy(() => import('@/pages/Replay'));
 const DevBody = lazy(() => import('@/pages/DevBody'));
@@ -25,6 +26,7 @@ export default function App() {
           <Route path="/dev/test" component={DevTest} />
           <Route path="/dev/body" component={DevBody} />
           <Route path="/pitch" component={Pitch} />
+          <Route path="/school" component={School} />
           <Route path="/replay/:id" component={Replay} />
           <Route><Home /></Route>
         </Switch>
