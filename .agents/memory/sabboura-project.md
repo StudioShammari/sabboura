@@ -11,3 +11,8 @@ description: Where the spec lives, architecture choices, AI-key state, shared te
 - Judge test runner (`shared/judgeCheck.ts`) is shared by `/dev/test` and `scripts/test-judge.ts`.
 - Server TTS manifest keys are sha1 including the TTS model, so pre-generated clips are only used when `TTS_MODEL` matches the one used by `gen:audio`.
 **Why:** hackathon demo; must never show an error in the classroom.
+
+## Standing rule: assets
+- Never generate assets (images, avatars, pre-recorded audio, any file) with the user's personal ANTHROPIC_API_KEY or OPENAI_API_KEY. Use Replit's built-in models for assets, or ask the user to make them.
+**Why:** user stated this directly after learning avatar and clip generation had used their OpenAI key (billed, with retries).
+**How to apply:** do not run `gen:audio` or `gen:avatars` (or any new asset script) while only personal keys exist. Runtime AI calls (judge, kid lines, live voices, speech-to-text) still use the personal keys until the user says otherwise.

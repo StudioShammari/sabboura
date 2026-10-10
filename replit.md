@@ -11,6 +11,7 @@ A flight simulator for teachers: practise a lesson on a class of five AI kids. F
 6) Transcription: send webm/mp4 unchanged. Do NOT convert with ffmpeg.
 7) Never store voice recordings. No Permissions-Policy header that blocks the microphone.
 8) Never show an error message in the classroom; use the fail-safes in SPEC B3.7.
+9) Never generate assets (images, avatars, pre-recorded audio) with the user's personal API keys. Use Replit built-in models, or ask the user to make them.
 9) Arabic: letter-spacing 0, Western digits, signed numbers and maths in <bdi dir="ltr">.
 10) Status colours only on kid badges (SPEC B1.1). No confetti on the review page.
 11) The /turn route streams SSE and is read with fetch + a stream reader; don't replace it with a generated hook or EventSource.
