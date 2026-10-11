@@ -29,6 +29,7 @@ TTS_MODEL = "gpt-audio-mini"
 deploymentTarget = "vm"
 run = ["pnpm", "--filter", "@workspace/sabboura", "run", "start"]
 build = ["pnpm", "--filter", "@workspace/sabboura", "run", "build"]
+ignorePorts = false
 
 [nix]
 channel = "stable-25_05"
