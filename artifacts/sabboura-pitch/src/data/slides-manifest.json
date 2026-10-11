@@ -1,0 +1,101 @@
+[
+  {
+    "id": "title",
+    "position": 1,
+    "kind": "jsx",
+    "filepath": "src/pages/slides/Title.tsx",
+    "title": "Sabboura",
+    "description": "Logo, name and tagline: a flight simulator for teachers",
+    "speakerNotes": "Sabboura means blackboard. Say the tagline out loud: «درّب حالك قبل ما تدخل الصف», practise your lesson before you teach it."
+  },
+  {
+    "id": "problem",
+    "position": 2,
+    "kind": "jsx",
+    "filepath": "src/pages/slides/Problem.tsx",
+    "title": "The problem",
+    "description": "Teachers practise on real kids; the فاهمين؟ trap",
+    "speakerNotes": "Every Jordanian knows this moment: the teacher asks فاهمين؟, the class says آه مس!, and half of them are lost. Most teachers only get feedback when someone comes to observe."
+  },
+  {
+    "id": "solution",
+    "position": 3,
+    "kind": "jsx",
+    "filepath": "src/pages/slides/Solution.tsx",
+    "title": "The solution",
+    "description": "Plan, teach and reflect with a class of five AI kids",
+    "speakerNotes": "Three steps: plan from tomorrow's real page, teach out loud to five AI kids, then get a calm review with one tip for tomorrow."
+  },
+  {
+    "id": "class",
+    "position": 4,
+    "kind": "jsx",
+    "filepath": "src/pages/slides/Class.tsx",
+    "title": "Meet the class",
+    "description": "Five kids, each with one real misconception",
+    "speakerNotes": "Introduce Omar and Lina in one line each. Lina never volunteers; only her badge shows she is lost."
+  },
+  {
+    "id": "demo",
+    "position": 5,
+    "kind": "jsx",
+    "filepath": "src/pages/slides/Demo.tsx",
+    "title": "Demo",
+    "description": "30-second video of a real lesson in the classroom",
+    "speakerNotes": "The video starts by itself. If the browser blocks sound, press Sound on. Let it play without talking over the kids."
+  },
+  {
+    "id": "trust",
+    "position": 6,
+    "kind": "jsx",
+    "filepath": "src/pages/slides/Trust.tsx",
+    "title": "Why it isn't just ChatGPT",
+    "description": "Fixed checklists, quoted evidence and code-based scoring",
+    "speakerNotes": "One line: the AI judges against a fixed checklist and must quote you; code counts everything."
+  },
+  {
+    "id": "product",
+    "position": 7,
+    "kind": "jsx",
+    "filepath": "src/pages/slides/Product.tsx",
+    "title": "Built and working today",
+    "description": "Features that already work in the product",
+    "speakerNotes": "Stress that everything on this slide is working today, built on Replit."
+  },
+  {
+    "id": "business",
+    "position": 8,
+    "kind": "jsx",
+    "filepath": "src/pages/slides/Business.tsx",
+    "title": "Business model",
+    "description": "8 JOD per teacher per month; free for public schools via sponsors",
+    "speakerNotes": "Private school groups sign one contract for hundreds of teachers. Public-school teachers use it free, paid by CSR budgets and foundations. Cost numbers are estimates until the pilots measure them."
+  },
+  {
+    "id": "market",
+    "position": 9,
+    "kind": "jsx",
+    "filepath": "src/pages/slides/Market.tsx",
+    "title": "Market and why we win",
+    "description": "Comparison with Mursion and the expansion path",
+    "speakerNotes": "Mursion proved the demand with human actors. AI removes the actor: cents per session, in Arabic."
+  },
+  {
+    "id": "team",
+    "position": 10,
+    "kind": "jsx",
+    "filepath": "src/pages/slides/Team.tsx",
+    "title": "The team",
+    "description": "Mustafa Al Shammari, Yousef Al Masri and Ahmad Shadeed from PSUT",
+    "speakerNotes": "Each person introduces themselves in one or two sentences: name, major, and the win or contribution on the card."
+  },
+  {
+    "id": "ask",
+    "position": 11,
+    "kind": "jsx",
+    "filepath": "src/pages/slides/Ask.tsx",
+    "title": "The ask",
+    "description": "Ministry of Education and school partnerships plus 50,000 JOD funding",
+    "speakerNotes": "Ask clearly: partnerships with the Ministry of Education and schools, and 50,000 JOD for operating costs, hiring, licenses and pilots. End on the tagline."
+  }
+]

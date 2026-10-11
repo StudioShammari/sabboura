@@ -1,0 +1,309 @@
+@import 'tailwindcss';
+
+@theme inline {
+  --color-primary: var(--slide-primary);
+  --color-accent: var(--slide-accent);
+  --color-bg: var(--slide-bg);
+  --color-text: var(--slide-text);
+  --color-muted: var(--slide-muted);
+  --font-display: var(--font-display-family);
+  --font-body: var(--font-body-family);
+}
+
+/* Sabboura "Chalk & Limestone" palette (same tokens as the app) */
+:root {
+  --limestone: #f3eadb;
+  --limestone-block: #e9dcc5;
+  --floor: #e6d7be;
+  --paper: #fffbf4;
+  --notebook: #fdfdf8;
+  --avatar-bg: #efe2cb;
+  --ink: #2b2118;
+  --ink-muted: #5e5040;
+  --line: #d8c7aa;
+  --line-strong: #8c7a5e;
+  --board: #2f3e2c;
+  --frame: #8a5a33;
+  --ledge: #5c3a20;
+  --desk: #b07a47;
+  --chalk: #f4f0e6;
+  --chalk-dim: #a5a99c;
+  --chalk-yellow: #f2d27a;
+  --action: #1f4fa0;
+  --action-dark: #173b78;
+
+  --slide-primary: var(--action);
+  --slide-accent: var(--chalk-yellow);
+  --slide-bg: var(--limestone);
+  --slide-text: var(--ink);
+  --slide-muted: var(--ink-muted);
+  --font-display-family: 'Baloo Bhaijaan 2', 'Noto Sans Arabic', Tahoma, system-ui, sans-serif;
+  --font-body-family: 'Readex Pro', 'Noto Sans Arabic', Tahoma, system-ui, sans-serif;
+  --font-chalk: 'Playpen Sans Arabic', 'Baloo Bhaijaan 2', system-ui, sans-serif;
+  color-scheme: light;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--slide-bg);
+  color: var(--slide-text);
+  font-family: var(--font-body-family);
+}
+
+.slide {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.slide-viewer {
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ---------- Slide shell: every size is relative to the slide (cqw/cqh) ---------- */
+.sb {
+  container-type: size;
+  position: relative;
+  overflow: hidden;
+  background-color: var(--limestone);
+  color: var(--ink);
+  font-family: var(--font-body-family);
+}
+.sb [dir='rtl'],
+.sb [lang='ar'] {
+  letter-spacing: 0 !important;
+}
+.sb-wall {
+  /* faint limestone blocks, decoration only */
+  background-image:
+    linear-gradient(var(--limestone-block) 0.1cqw, transparent 0.1cqw),
+    linear-gradient(90deg, var(--limestone-block) 0.1cqw, transparent 0.1cqw);
+  background-size: 9cqw 3cqw;
+  background-position: -0.05cqw -0.05cqw;
+}
+.sb-inner {
+  position: absolute;
+  inset: 0;
+  padding: 4.6cqw 5.2cqw 5.6cqw;
+  display: flex;
+  flex-direction: column;
+}
+.sb-foot {
+  position: absolute;
+  left: 5.2cqw;
+  right: 5.2cqw;
+  bottom: 1.9cqw;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.95cqw;
+  font-weight: 500;
+  color: var(--ink-muted);
+}
+.sb-foot-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.6cqw;
+  font-family: var(--font-display-family);
+  font-weight: 700;
+  font-size: 1.15cqw;
+  color: var(--ink);
+}
+.sb-dark .sb-foot,
+.sb-dark .sb-foot-brand {
+  color: var(--chalk-dim);
+}
+
+/* ---------- Type ---------- */
+.eyebrow {
+  font-size: 1.05cqw;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+.h-display {
+  font-family: var(--font-display-family);
+  font-weight: 800;
+  font-size: 4.3cqw;
+  line-height: 1.04;
+  color: var(--ink);
+  margin: 0;
+}
+.h-section {
+  font-family: var(--font-display-family);
+  font-weight: 800;
+  font-size: 1.9cqw;
+  line-height: 1.15;
+  margin: 0;
+}
+.lead {
+  font-size: 1.6cqw;
+  line-height: 1.45;
+  color: var(--ink-muted);
+  margin: 0;
+}
+.body {
+  font-size: 1.3cqw;
+  line-height: 1.5;
+  color: var(--ink-muted);
+  margin: 0;
+}
+.ar {
+  font-family: var(--font-body-family);
+  letter-spacing: 0 !important;
+}
+.chalk-font {
+  font-family: var(--font-chalk);
+  font-weight: 700;
+  letter-spacing: 0 !important;
+}
+.mark {
+  background: var(--chalk-yellow);
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  padding: 0 0.3em;
+  border-radius: 0.2em;
+}
+.ink-blue {
+  color: var(--action);
+}
+
+/* ---------- Board, frame and ledge ---------- */
+.board {
+  position: relative;
+  background: var(--board);
+  color: var(--chalk);
+  border: 0.95cqw solid var(--frame);
+  border-radius: 1.3cqw;
+  box-shadow: inset 0 0 0 0.18cqw rgba(0, 0, 0, 0.18);
+}
+.ledge {
+  height: 1.1cqw;
+  background: var(--ledge);
+  border-radius: 0.5cqw;
+  margin: -0.25cqw -1cqw 0;
+  position: relative;
+}
+.ledge-chalk {
+  position: absolute;
+  top: -0.55cqw;
+  width: 3.2cqw;
+  height: 0.75cqw;
+  border-radius: 0.4cqw;
+  background: var(--chalk);
+}
+
+/* ---------- Paper cards ---------- */
+.card {
+  background: var(--paper);
+  border: 0.12cqw solid var(--line);
+  border-radius: 1.25cqw;
+  box-shadow: 0 0.3cqw 0 var(--line);
+}
+
+/* ---------- Kid badges (status colours live only here) ---------- */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4cqw;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.95cqw;
+  line-height: 1;
+  padding: 0.45cqw 0.9cqw;
+  white-space: nowrap;
+}
+.badge-lost {
+  background: #fff1ec;
+  border: 0.16cqw dashed #b3361f;
+  color: #8c2716;
+}
+.badge-partly {
+  background: #f4c55c;
+  border: 0.16cqw solid #9a6200;
+  color: #4d3200;
+}
+.badge-gotit {
+  background: #0f7b6c;
+  border: 0.16cqw solid #0f7b6c;
+  color: #fff;
+}
+.badge-bored {
+  background: #f4f1ec;
+  border: 0.16cqw dashed #7a7368;
+  color: #3f3a33;
+}
+
+/* ---------- Avatars ---------- */
+.avatar {
+  background: var(--avatar-bg);
+  border-radius: 1cqw;
+  overflow: hidden;
+  display: block;
+}
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* ---------- Step number ---------- */
+.step-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.6cqw;
+  height: 2.6cqw;
+  border-radius: 999px;
+  background: var(--action);
+  color: #fff;
+  font-family: var(--font-display-family);
+  font-weight: 800;
+  font-size: 1.45cqw;
+  line-height: 1;
+}
+
+/* ---------- Video ---------- */
+.video-frame {
+  position: relative;
+  background: #000;
+  border: 0.95cqw solid var(--frame);
+  border-radius: 1.3cqw;
+  overflow: hidden;
+}
+.video-frame video {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  object-fit: contain;
+  background: #000;
+}
+.sound-btn {
+  position: absolute;
+  top: 1.2cqw;
+  right: 1.2cqw;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5cqw;
+  padding: 0.6cqw 1.1cqw;
+  border: none;
+  border-radius: 999px;
+  background: var(--action);
+  color: #fff;
+  font: 600 1cqw var(--font-body-family);
+  cursor: pointer;
+  box-shadow: 0 0.25cqw 0 var(--action-dark);
+}

@@ -1,0 +1,28 @@
+kind = "slides"
+previewPath = "/pitch-deck/"
+title = "Sabboura Pitch Deck"
+description = "Investor and judges pitch deck for Sabboura with demo video, team and the ask"
+version = "1.0.0"
+id = "artifacts/sabboura-pitch"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/pitch-deck/" ]
+localPort = 20577
+
+[services.development]
+run = "pnpm --filter @workspace/sabboura-pitch run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/sabboura-pitch", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/sabboura-pitch/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "20577"
+BASE_PATH = "/pitch-deck/"
