@@ -154,3 +154,9 @@ mtime_ms = 1791649173776
 storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:2e97b30e-7cb5-420e-992f-61305f749ba7/3c6220e2-348c-4e45-828b-922d9bd86f20/cbd3f34a-9ea9-48ad-896b-2cc13be0e85a"
 storage_version_token = "1791649207649923"
 content_type = "image/png"
+
+[[outputs]]
+id = "v-QUo7Y8eqr7rGSkR7db0"
+uri = "file://.local/outputs/Sabboura-Pitch-Deck.pptx"
+type = "slides"
+title = "Sabboura Pitch Deck.pptx"
