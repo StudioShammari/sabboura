@@ -62,26 +62,34 @@ export function chorusPlan(setting: ClassSetting): ChorusVoice[] {
 }
 
 export async function playChorus(lang: Lang, title: Title, ui: TurnUI, setting: ClassSetting = DEFAULT_SETTING) {
+  try { await chorusPlayback(lang, title, ui, setting); } finally { ui.onDone(); }
+}
+async function chorusPlayback(lang: Lang, title: Title, ui: TurnUI, setting: ClassSetting = DEFAULT_SETTING) {
+  if (ui.stale()) return;
   const text = chorusFor(lang, title);
   ui.onChorus(text, 'show');
   const order = chorusPlan(setting);
-  const bufs = await Promise.all(order.map((v) => clipFor(v.src, lang, text)));
+  const bufs = await Promise.all(order.map((v) => clipFor(v.src, lang, text).catch(() => null)));
   if (ui.stale()) return;
   const plays = order.map((v, i) => (bufs[i] ? playBuffer(bufs[i]!, { delayMs: v.delayMs, gain: v.gain, ...(v.rate ? { rate: v.rate } : {}) }) : null));
   setTimeout(() => !ui.stale() && ui.onChorus(text, 'stamp'), 700);
   const anyAudio = plays.some(Boolean);
   await Promise.all(plays.map((p) => p?.done));
   await sleep(anyAudio ? 900 : 1800);
-  ui.onChorus(text, 'hide');
+  if (!ui.stale()) ui.onChorus(text, 'hide');
 }
 
-export async function playLocalFailsafe(lang: Lang, ui: Pick<TurnUI, 'onSpeakStart' | 'onSpeakEnd' | 'stale'>, kid: KidId = 'omar', setting: ClassSetting = DEFAULT_SETTING) {
+export async function playLocalFailsafe(lang: Lang, ui: TurnUI, kid: KidId = 'omar', setting: ClassSetting = DEFAULT_SETTING) {
+  try { await failsafePlayback(lang, ui, kid, setting); } finally { ui.onDone(); }
+}
+async function failsafePlayback(lang: Lang, ui: TurnUI, kid: KidId = 'omar', setting: ClassSetting = DEFAULT_SETTING) {
+  if (ui.stale()) return;
   const text = kidById(kid).failsafe[lang];
-  const buf = await clipFor(kid, lang, text, setting.group);
+  const buf = await clipFor(kid, lang, text, setting.group).catch(() => null);
   if (ui.stale()) return;
   ui.onSpeakStart(kid, { idx: 0, kid, reason: 'objection', text, text_en: kidById(kid).failsafe.en, source: 'failsafe' });
   if (buf) await playBuffer(buf).done; else await sleep(1800);
-  ui.onSpeakEnd(kid);
+  if (!ui.stale()) ui.onSpeakEnd(kid);
 }
 
 export async function playTurn(o: TurnOpts): Promise<void> {
@@ -95,7 +103,7 @@ export async function playTurn(o: TurnOpts): Promise<void> {
     return slots.get(i)!;
   };
   const doneD = deferred<void>();
-  let sawState = false, sawBusy = false, first = false, finished = false;
+  let sawState = false, sawBusy = false, sawLine = false, first = false, finished = false;
   let runner: Promise<void> | null = null;
   let chorusP: Promise<void> | null = null;
 
@@ -110,24 +118,25 @@ export async function playTurn(o: TurnOpts): Promise<void> {
         if (ui.stale()) break;
         ui.onSpeakStart(line.kid, line);
         if (buf) await playBuffer(buf).done; else await sleep(readMs(line.text));
-        ui.onSpeakEnd(line.kid);
         if (ui.stale()) break;
+        ui.onSpeakEnd(line.kid);
         await sleep(180);
       }
     })();
   };
 
   const handle = (ev: TurnEvent) => {
+    if (ui.stale() || finished) return;
     ui.onEvent?.(ev.event, ev.data);
     switch (ev.event) {
       case 'busy': sawBusy = true; break;
       case 'state': sawState = true; ui.onState(ev.data); break;
-      case 'chorus': firstOutput(); chorusP = playChorus(lang, title, ui, o.setting); break;
-      case 'line': { firstOutput(); slot(ev.data.idx).line.resolve(ev.data); startRunner(); break; }
+      case 'chorus': firstOutput(); chorusP = chorusPlayback(lang, title, ui, o.setting); break;
+      case 'line': { sawLine = true; firstOutput(); slot(ev.data.idx).line.resolve(ev.data); startRunner(); break; }
       case 'audio': {
         const d = ev.data;
         const p = d.url ? decodeUrl(d.url) : d.b64 ? decodeB64(d.b64) : Promise.resolve(null);
-        p.then((b) => slot(d.idx).audio.resolve(b));
+        p.then((b) => slot(d.idx).audio.resolve(b), () => slot(d.idx).audio.resolve(null));
         break;
       }
       case 'audio_failed': slot(ev.data.idx).audio.resolve(null); break;
@@ -138,28 +147,34 @@ export async function playTurn(o: TurnOpts): Promise<void> {
 
   const guard = setTimeout(() => { if (!finished) { ac.abort(); } }, 20000);
   try {
+  try {
     for (let attempt = 0; attempt < 6; attempt++) {
+      if (ui.stale()) return;
       sawBusy = false;
       await streamTurn(o.lessonId, { text: o.text, source: o.source, teacherSeconds: o.seconds, clientTurnId }, handle, ac.signal);
+      if (ui.stale()) return;
       if (sawBusy && !sawState) { await sleep(900); continue; }
       break;
     }
-    if (!sawState) throw new Error('no state');
+    if (!sawState || (!sawLine && !chorusP)) throw new Error('no output');
   } catch {
     clearTimeout(guard);
     finished = true;
     doneD.resolve();
-    if (!ac.signal.aborted || !ui.stale()) { firstOutput(); await playLocalFailsafe(lang, ui, 'omar', o.setting); }
-    ui.onDone();
+    await runner;
+    await chorusP;
+    if (!ui.stale()) { firstOutput(); await failsafePlayback(lang, ui, 'omar', o.setting); }
     return;
   }
   clearTimeout(guard);
   finished = true;
   doneD.resolve();
-  firstOutput();
+  if (!ui.stale()) firstOutput();
   await runner;
   await chorusP;
-  ui.onDone();
+  } finally {
+    finished = true; clearTimeout(guard); doneD.resolve(); ac.abort(); ui.onDone();
+  }
 }
 
 export type { KidChange };
@@ -176,14 +191,16 @@ export async function playQuestion(o: { lessonId: string; kid: KidId; lang: Lang
   const guard = setTimeout(() => ac.abort(), 14000);
   try {
     await streamCallOn(o.lessonId, kid, (ev) => {
+      if (ui.stale()) return;
       ui.onEvent?.(ev.event, ev.data);
       if (ev.event === 'line') { firstOutput(); line.resolve(ev.data); }
       else if (ev.event === 'audio') {
         const d = ev.data;
-        (d.url ? decodeUrl(d.url) : d.b64 ? decodeB64(d.b64) : Promise.resolve(null)).then((b) => audio.resolve(b));
+        (d.url ? decodeUrl(d.url) : d.b64 ? decodeB64(d.b64) : Promise.resolve(null)).then((b) => audio.resolve(b), () => audio.resolve(null));
       } else if (ev.event === 'audio_failed') audio.resolve(null);
-      else if (ev.event === 'done') { line.resolve(null); audio.resolve(null); }
+      else if (ev.event === 'done' || ev.event === 'busy') { line.resolve(null); audio.resolve(null); }
     }, ac.signal);
+    line.resolve(null); audio.resolve(null);
     const l = await line.p;
     if (!l) throw new Error('no question');
     if (ui.stale()) return;
@@ -191,11 +208,12 @@ export async function playQuestion(o: { lessonId: string; kid: KidId; lang: Lang
     if (ui.stale()) return;
     ui.onSpeakStart(kid, l);
     if (buf) await playBuffer(buf).done; else await sleep(readMs(l.text));
-    ui.onSpeakEnd(kid);
+    if (!ui.stale()) ui.onSpeakEnd(kid);
   } catch {
-    if (!ui.stale()) { firstOutput(); await playLocalFailsafe(lang, ui, kid, o.setting); }
+    if (!ui.stale()) { firstOutput(); await failsafePlayback(lang, ui, kid, o.setting); }
   } finally {
     clearTimeout(guard);
+    ac.abort();
+    ui.onDone();
   }
-  ui.onDone();
 }

@@ -39,6 +39,7 @@ export default function Home() {
   const pick = useRef<HTMLInputElement>(null);
   const isPdf = !!file && (file.type === 'application/pdf' || /\.pdf$/i.test(file.name));
   const canMake = !!file || text.trim().length >= 20;
+  const tooShort = !file && text.trim().length > 0 && !canMake;
 
   const choose = (f: File | null | undefined) => {
     if (!f) return;
@@ -108,7 +109,8 @@ export default function Home() {
             <p>{tr(errKey(up.reason)[1], lang)}</p>
             <div className="actions">
               {up.reason === 'page_range' && <button type="button" className="btn btn-primary" onClick={() => setUp({ phase: 'idle' })}>{tr('changePages', lang)}</button>}
-              <button type="button" className={`btn${up.reason === 'page_range' ? '' : ' btn-primary'}`} onClick={() => { setFile(null); setText(''); setUp({ phase: 'idle' }); setTimeout(() => pick.current?.click(), 0); }}>{tr('tryAnother', lang)}</button>
+              {up.reason === 'timeout' && (file || text.trim()) && <button type="button" className="btn btn-primary" onClick={() => void make()}>{tr('retryUpload', lang)}</button>}
+              <button type="button" className={`btn${up.reason === 'page_range' || up.reason === 'timeout' ? '' : ' btn-primary'}`} onClick={() => { setFile(null); setText(''); setUp({ phase: 'idle' }); setTimeout(() => pick.current?.click(), 0); }}>{tr('tryAnother', lang)}</button>
               <button type="button" className="btn" onClick={() => { setFile(null); setText(''); setUp({ phase: 'idle' }); }}>{tr('useReady', lang)}</button>
             </div>
           </div>
@@ -129,7 +131,8 @@ export default function Home() {
               {!file && (
                 <label className="paste">
                   <span className="lbl">{tr('orPaste', lang)}</span>
-                  <textarea rows={2} value={text} maxLength={PACK_MAX_TEXT} placeholder={tr('pastePh', lang)} onChange={(e) => setText(e.target.value)} />
+                  <textarea rows={2} value={text} maxLength={PACK_MAX_TEXT} placeholder={tr('pastePh', lang)} onChange={(e) => setText(e.target.value)} aria-describedby={tooShort ? 'paste-min' : undefined} />
+                  {tooShort && <small id="paste-min" className="paste-min">{tr('pasteMin', lang)}</small>}
                 </label>
               )}
               <div className="upload-foot">
@@ -164,7 +167,7 @@ export default function Home() {
         </div>
       </div>
       <footer className="home-foot">
-        {qr && <img src={qr} alt="QR" width={56} height={56} style={{ borderRadius: 8 }} />}
+        {qr && <img className="home-qr" src={qr} alt={lang === 'ar' ? 'رمز QR لفتح سبّورة على جوّالك' : 'QR code to open Sabboura on your phone'} width={56} height={56} style={{ borderRadius: 8 }} />}
         <span>{tr('privacy', lang)}</span>
         <a className="text-link" href="/school" onClick={(e) => { e.preventDefault(); nav('/school'); }}>{lang === 'ar' ? 'للمدارس' : 'For schools'}</a>
       </footer>

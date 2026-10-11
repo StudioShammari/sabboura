@@ -43,6 +43,10 @@ async function main() {
   }
 
   app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    if (err?.type === 'entity.parse.failed' || err?.type === 'entity.too.large') {
+      if (!res.headersSent) res.status(err.type === 'entity.too.large' ? 413 : 400).json({ error: 'bad request' });
+      return;
+    }
     console.error('[server] unhandled', err?.message ?? err);
     if (!res.headersSent) res.status(500).json({ error: 'server' });
   });

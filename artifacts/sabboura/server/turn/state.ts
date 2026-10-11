@@ -31,16 +31,48 @@ export interface LessonState {
 }
 
 const mem = new Map<string, LessonState>();
+const loading = new Map<string, Promise<LessonState | null>>();
+const lifecycle = new Map<string, { closed: boolean; active?: Promise<void> }>();
+
+function life(id: string) {
+  let value = lifecycle.get(id);
+  if (!value) { value = { closed: false }; lifecycle.set(id, value); }
+  return value;
+}
+export const isClosed = (id: string) => life(id).closed;
+/** Synchronous admission: End closes this gate before awaiting any work. */
+export function beginWork(id: string): (() => void) | null {
+  const l = life(id);
+  if (l.closed || l.active) return null;
+  let release!: () => void;
+  l.active = new Promise<void>((resolve) => { release = resolve; });
+  return () => { l.active = undefined; release(); };
+}
+export function closeLesson(id: string): Promise<void> {
+  const l = life(id);
+  l.closed = true;
+  return l.active ?? Promise.resolve();
+}
 
 export function putState(s: LessonState) { mem.set(s.id, s); }
 export function dropState(id: string) { mem.delete(id); }
 
 export async function getState(id: string): Promise<LessonState | null> {
+  id = id.toLowerCase();
   const hit = mem.get(id);
   if (hit) return hit;
-  if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) return null;
+  const pending = loading.get(id);
+  if (pending) return pending;
+  const job = loadState(id);
+  loading.set(id, job);
+  try { return await job; } finally { loading.delete(id); }
+}
+
+async function loadState(id: string): Promise<LessonState | null> {
   const [l] = await db.select().from(lessons).where(eq(lessons.id, id)).limit(1);
   if (!l) return null;
+  if (l.endedAt) life(id).closed = true;
   if (l.topicJson) registerTopic(l.topicJson as TopicDef);
   const ts = await db.select().from(turns).where(eq(turns.lessonId, id)).orderBy(asc(turns.turnNo));
   const lines = await db.select().from(kidLines).where(eq(kidLines.lessonId, id));

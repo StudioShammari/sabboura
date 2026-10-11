@@ -22,7 +22,15 @@ export function fallbackFeedback(score: ScoreJson, lang: Lang, setting: ClassSet
   const anyFully = score.moves.find((m) => m.key === 'reached')!.points > 0 && KID_IDS.some((k) => fin[k] === 2);
   const anyPartly = KID_IDS.some((k) => fin[k] >= 1);
   const clarity = anyFully ? 3 : anyPartly ? 2 : 1;
-  return { clarity, clarity_reason: '', why_it_worked: '', one_tip: tip, try_saying: trySay, fallback: true };
+  const why = score.turns === 0
+    ? (lang === 'ar' ? 'الحصة كانت قصيرة وما فيها مداخلات محفوظة لنحكم على الشرح. جرّب مثال وبعدين اسأل طالب يشرح فكرته.' : 'There were no completed turns to judge yet. Try an example, then ask a student to explain their thinking.')
+    : score.reached > 0
+      ? (lang === 'ar' ? `بنهاية الحصة، ${score.reached} من 4 طلاب وصلوا للفهم. ابنِ على هالنتيجة بسؤال يطلب تفسير السبب.` : `By the end, ${score.reached} of 4 students reached understanding. Build on that with a question asking them to explain why.`)
+      : (lang === 'ar' ? 'لسّا ما ظهر فهم كامل عند الطلاب الأربعة. ابنِ على المحاولة بمثال ملموس، واسأل طالب يشرح خطوة بكلماته.' : 'The four students have not yet shown full understanding. Build on this attempt with a concrete example and ask a student to explain one step in their own words.');
+  const reason = lang === 'ar'
+    ? 'تقدير احتياطي مبني على مستويات الفهم المسجّلة، وليس حكماً كاملاً على وضوح الشرح.'
+    : 'A fallback estimate based on recorded understanding levels, not a full judgement of explanation clarity.';
+  return { clarity, clarity_reason: reason, why_it_worked: why, one_tip: tip, try_saying: trySay, fallback: true };
 }
 
 export async function scoreWithAI(args: { score: ScoreJson; turns: TurnRec[]; setting?: ClassSetting }): Promise<AiPart> {

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useParams } from 'wouter';
+import { Link, useParams } from 'wouter';
 import { KID_IDS, topicById, chorusFor, type KidId, type Level, type Levels, startLevels } from '@shared/data';
 import { Board } from '@/components/Board';
 import { KidCard, type CardView } from '@/components/KidCard';
@@ -18,6 +18,7 @@ export default function Replay() {
   const [data, setData] = useState<ReplayData | null>(null);
   const [bufs, setBufs] = useState<Map<string, AudioBuffer | null>>(new Map());
   const [loaded, setLoaded] = useState(false);
+  const [failed, setFailed] = useState(false);
   const [idx, setIdx] = useState(-1);
   const [levels, setLevels] = useState<Levels | null>(null);
   const [views, setViews] = useState<Partial<Record<KidId, CardView>>>({});
@@ -32,7 +33,7 @@ export default function Replay() {
       const m = new Map<string, AudioBuffer | null>();
       await Promise.all(d.turns.flatMap((t) => t.lines).map(async (l) => { m.set(l.audioUrl, await decodeUrl(l.audioUrl)); }));
       setBufs(m); setLoaded(true);
-    }).catch(() => setLoaded(true));
+    }).catch(() => { setFailed(true); setLoaded(true); });
   }, [id]);
 
   const next = useCallback(async () => {
@@ -65,11 +66,20 @@ export default function Replay() {
   }, [data, loaded, idx, bufs]);
 
   useEffect(() => {
-    const f = (e: KeyboardEvent) => { if (e.code === 'ArrowRight' || e.code === 'ArrowLeft' || e.code === 'PageDown' || e.code === 'Space') { e.preventDefault(); void next(); } };
+    const f = (e: KeyboardEvent) => { if (e.code === 'ArrowRight' || e.code === 'PageDown' || e.code === 'Space') { e.preventDefault(); void next(); } };
     window.addEventListener('keydown', f); return () => window.removeEventListener('keydown', f);
   }, [next]);
 
-  if (!data || !levels) return <main className="classroom">{loaded ? <p style={{ padding: 40 }}>{tr('notFound', lang)}</p> : <p style={{ padding: 40 }}>{tr('loading', lang)}</p>}</main>;
+  if (!data || !levels) return (
+    <main className="classroom">
+      {loaded ? (
+        <div className="panel" role="alert" style={{ margin: 40, display: 'grid', gap: 12, justifyItems: 'start' }}>
+          <p style={{ margin: 0 }}>{tr(failed ? 'replayLoadFail' : 'notFound', lang)}</p>
+          <Link href={`/lesson/${id}/score`} className="btn btn-primary">{tr('backToReview', lang)}</Link>
+        </div>
+      ) : <p style={{ padding: 40 }} role="status">{tr('loading', lang)}</p>}
+    </main>
+  );
   const topic = topicById(data.topicId);
   const turn = data.turns[idx];
   return (

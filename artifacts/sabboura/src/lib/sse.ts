@@ -31,21 +31,29 @@ async function streamPost(path: string, body: unknown, onEvent: (ev: TurnEvent) 
   if (!res.ok || !ct.includes('text/event-stream') || !res.body) throw new Error('bad turn response');
   const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
   let buf = '';
+  const emit = (chunk: string) => {
+    let event = '';
+    const data: string[] = [];
+    for (const line of chunk.split('\n')) {
+      if (line.startsWith('event:')) event = line.slice(6).trim();
+      else if (line.startsWith('data:')) data.push(line.slice(5).replace(/^ /, ''));
+    }
+    if (!event || !data.length) return;
+    let parsed: unknown;
+    try { parsed = JSON.parse(data.join('\n')); } catch { return; }
+    onEvent({ event, data: parsed } as TurnEvent);
+  };
+  try {
   for (;;) {
     const { value, done } = await reader.read();
-    if (done) break;
-    buf += value.replace(/\r\n/g, '\n');
+    buf = (buf + (value ?? '')).replace(/\r\n/g, '\n');
     let i: number;
     while ((i = buf.indexOf('\n\n')) >= 0) {
       const chunk = buf.slice(0, i);
       buf = buf.slice(i + 2);
-      let event = '', data = '';
-      for (const line of chunk.split('\n')) {
-        if (line.startsWith('event:')) event = line.slice(6).trim();
-        else if (line.startsWith('data:')) data += line.slice(5).trim();
-      }
-      if (!event || !data) continue;
-      try { onEvent({ event, data: JSON.parse(data) } as TurnEvent); } catch { /* ignore malformed */ }
+      emit(chunk);
     }
+    if (done) { if (buf.trim()) emit(buf); break; }
   }
+  } finally { reader.releaseLock(); }
 }

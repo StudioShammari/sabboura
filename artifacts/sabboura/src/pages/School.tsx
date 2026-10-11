@@ -109,7 +109,7 @@ export default function School() {
         <p>{X.sub[lang]}</p>
       </header>
 
-      <section className="sc-stats" aria-label="stats">
+      <section className="sc-stats" aria-label={lang === 'ar' ? 'الأرقام' : 'Stats'}>
         <article className="sc-card">
           <h3>{X.s1[lang]}</h3>
           <div className="sc-big"><bdi dir="ltr">31</bdi> <small>{X.s1of[lang]}</small></div>

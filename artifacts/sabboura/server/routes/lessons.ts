@@ -1,6 +1,6 @@
 import { Router, type Request, type Response } from 'express';
 import multer from 'multer';
-import { and, asc, desc, eq } from 'drizzle-orm';
+import { and, asc, desc, eq, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 import { KID_IDS, registerTopic, startLevels, topics, uploadedTopic, type TopicDef, type KidId, type Lang, type Levels, type Title } from '../../shared/data';
 import type { ScoreJson } from '../../shared/schemas';
@@ -13,13 +13,18 @@ import { computeScore, withClarity, type TurnRec } from '../rules/score';
 import { runTurn } from '../turn/runTurn';
 import { runQuestion } from '../turn/runQuestion';
 import { openSSE } from '../turn/sse';
-import { dropState, getState, putState } from '../turn/state';
+import { beginWork, closeLesson, dropState, getState, isClosed, putState } from '../turn/state';
 import { since, withTimeout } from '../lib/timing';
 import { cleanPlan, defaultPlan, PLAN_KINDS, type Plan, type PlanCheck } from '../../shared/plan';
 import { checkPlanAI, checkPlanCode } from '../plan/checkPlan';
 import { backRowDriftTurns, backRowLevels, isLarge, normalizeSetting, swapFromDefault, type ClassSetting } from '../../shared/setting';
 
 export const lessonsRouter = Router();
+lessonsRouter.param('id', (req, res, next, id) => {
+  if (!z.string().uuid().safeParse(id).success) return void res.status(400).json({ error: 'bad request' });
+  req.params.id = id.toLowerCase();
+  next();
+});
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 12 * 1024 * 1024 } });
 
 const PlanBody = z.object({
@@ -99,12 +104,20 @@ lessonsRouter.get('/lessons/:id', async (req, res) => {
   });
 });
 
-lessonsRouter.post('/lessons/:id/transcribe', upload.single('audio'), async (req, res) => {
+lessonsRouter.post('/lessons/:id/transcribe', (req, res, next) => {
+  upload.single('audio')(req, res, (err: any) => {
+    if (err) return void res.status(err.code === 'LIMIT_FILE_SIZE' ? 413 : 400).json({ error: 'bad request' });
+    next();
+  });
+}, async (req, res) => {
   const t0 = performance.now();
   const s = await getState(String(req.params.id));
   if (!s) return void res.status(404).json({ error: 'not found' });
   const f = req.file;
+  if (req.body?.durationMs !== undefined && !['string', 'number'].includes(typeof req.body.durationMs)) return void res.status(400).json({ error: 'bad request' });
+  if (req.body?.mime !== undefined && typeof req.body.mime !== 'string') return void res.status(400).json({ error: 'bad request' });
   const durationMs = Number(req.body?.durationMs ?? 0);
+  if (!Number.isFinite(durationMs) || durationMs < 0) return void res.status(400).json({ error: 'bad request' });
   if (!f || f.size < 200) return void res.json({ transcript: '', empty: true, seconds: 0, sttMs: 0 });
   try {
     const r = await transcribe({ buf: f.buffer, mime: String(req.body?.mime || f.mimetype || 'audio/webm'), lang: s.language, topicId: s.topicId, setting: s.setting });
@@ -171,20 +184,23 @@ lessonsRouter.post('/lessons/:id/call-on', async (req: Request, res: Response) =
 lessonsRouter.post('/lessons/:id/redo', async (req, res) => {
   const s = await getState(String(req.params.id));
   if (!s) return void res.status(404).json({ error: 'not found' });
-  if (s.busy) return void res.status(409).json({ error: 'busy' });
-  if (s.turnNo > 0) {
-    const n = s.turnNo;
-    await db.transaction(async (tx) => {
-      await tx.delete(kidLines).where(and(eq(kidLines.lessonId, s.id), eq(kidLines.turnNo, n)));
-      await tx.delete(kidLevels).where(and(eq(kidLevels.lessonId, s.id), eq(kidLevels.turnNo, n)));
-      await tx.delete(turns).where(and(eq(turns.lessonId, s.id), eq(turns.turnNo, n)));
-      await tx.delete(bodyTurns).where(and(eq(bodyTurns.lessonId, s.id), eq(bodyTurns.turnNo, n)));
-    });
-  }
-  const last = s.lastTranscript;
-  dropState(s.id);
-  const ns = await getState(s.id);
-  res.json({ turnNo: ns?.turnNo ?? 0, levels: ns?.levels ?? s.levels, lastTranscript: last });
+  const release = beginWork(s.id);
+  if (!release) return void res.status(409).json({ error: isClosed(s.id) ? 'lesson ended' : 'busy' });
+  try {
+    if (s.turnNo > 0) {
+      const n = s.turnNo;
+      await db.transaction(async (tx) => {
+        await tx.delete(kidLines).where(and(eq(kidLines.lessonId, s.id), eq(kidLines.turnNo, n)));
+        await tx.delete(kidLevels).where(and(eq(kidLevels.lessonId, s.id), eq(kidLevels.turnNo, n)));
+        await tx.delete(turns).where(and(eq(turns.lessonId, s.id), eq(turns.turnNo, n)));
+        await tx.delete(bodyTurns).where(and(eq(bodyTurns.lessonId, s.id), eq(bodyTurns.turnNo, n)));
+      });
+    }
+    const last = s.lastTranscript;
+    dropState(s.id);
+    const ns = await getState(s.id);
+    res.json({ turnNo: ns?.turnNo ?? 0, levels: ns?.levels ?? s.levels, lastTranscript: last });
+  } finally { release(); }
 });
 
 async function turnRecs(lessonId: string): Promise<{ recs: TurnRec[]; start: Levels }> {
@@ -205,10 +221,10 @@ async function turnRecs(lessonId: string): Promise<{ recs: TurnRec[]; start: Lev
   return { recs, start: startLevels(l.topicId) };
 }
 
-async function buildScore(lessonId: string, force: boolean): Promise<ScoreJson | null> {
+async function buildScore(lessonId: string): Promise<ScoreJson | null> {
   const [l] = await db.select().from(lessons).where(eq(lessons.id, lessonId)).limit(1);
-  if (!l) return null;
-  if (l.scoreJson && !force) return l.scoreJson as ScoreJson;
+  if (!l?.endedAt) return null;
+  if (l.scoreJson) return l.scoreJson as ScoreJson;
   const { recs, start } = await turnRecs(lessonId);
   const setting = normalizeSetting(l.settingJson);
   let score = computeScore({
@@ -216,7 +232,9 @@ async function buildScore(lessonId: string, force: boolean): Promise<ScoreJson |
     seconds: Math.round(recs.reduce((a, t) => a + t.teacherSeconds, 0)), attemptNo: l.attemptNo,
   });
   let ai;
-  try {
+  // nothing was said: there is nothing for the AI judge to read, so the fixed feedback is used
+  if (recs.length === 0) ai = fallbackFeedback(score, score.language, setting);
+  else try {
     ai = await withTimeout(scoreWithAI({ score, turns: recs, setting }), 25000, 'scorer timeout');
   } catch {
     ai = fallbackFeedback(score, score.language, setting);
@@ -224,7 +242,7 @@ async function buildScore(lessonId: string, force: boolean): Promise<ScoreJson |
   const levels = backRowLevels(recs.map((t) => ({ seconds: t.teacherSeconds, check: t.check, askedKid: t.askedKid })));
   const backRow = isLarge(setting) ? { levels, drift: backRowDriftTurns(levels) } : null;
   score = withClarity({ ...score, ai, setting, back_row: backRow }, ai.clarity);
-  await db.update(lessons).set({ scoreJson: score, endedAt: new Date() }).where(eq(lessons.id, lessonId));
+  await db.update(lessons).set({ scoreJson: score }).where(eq(lessons.id, lessonId));
   return score;
 }
 
@@ -240,6 +258,7 @@ async function startPlanCheck(lessonId: string): Promise<void> {
     try {
       const [l] = await db.select().from(lessons).where(eq(lessons.id, lessonId)).limit(1);
       if (!l?.planJson) return;
+      if ((l.planCheckJson as PlanCheck | null)?.status === 'done') return;
       const { recs } = await turnRecs(lessonId);
       const inp = { language: l.language as Lang, topicId: l.topicId, plan: l.planJson as Plan, turns: recs, setting: normalizeSetting(l.settingJson) };
       const code = checkPlanCode(inp);
@@ -272,15 +291,53 @@ lessonsRouter.get('/lessons/:id/plan-check', async (req, res) => {
   res.json({ packId: l.packId, setting: normalizeSetting(l.settingJson), plan: l.planJson ?? null, check: (l.planCheckJson as PlanCheck | null) ?? null });
 });
 
+const scoreJobs = new Map<string, Promise<ScoreJson | null>>();
+function finalScore(id: string) {
+  let job = scoreJobs.get(id);
+  if (!job) {
+    job = buildScore(id).finally(() => scoreJobs.delete(id));
+    scoreJobs.set(id, job);
+  }
+  return job;
+}
+const endJobs = new Map<string, Promise<ScoreJson | null>>();
+function endLesson(id: string) {
+  let job = endJobs.get(id);
+  if (!job) {
+    const completed = closeLesson(id);
+    job = (async () => {
+      // Never score a partial turn, even if the HTTP caller times out.
+      await completed;
+      await db.update(lessons).set({ endedAt: new Date() }).where(and(eq(lessons.id, id), isNull(lessons.endedAt)));
+      const [score] = await Promise.all([finalScore(id), startPlanCheck(id)]);
+      return score;
+    })().finally(() => endJobs.delete(id));
+    endJobs.set(id, job);
+  }
+  return job;
+}
+
 lessonsRouter.post('/lessons/:id/end', async (req, res) => {
-  if (!(await getState(String(req.params.id)))) return void res.status(404).json({ error: 'not found' });
-  const [score] = await Promise.all([buildScore(req.params.id, true), startPlanCheck(req.params.id)]);
-  res.json({ scoreUrl: `/lesson/${req.params.id}/score`, score });
+  const id = String(req.params.id);
+  if (!(await getState(id))) return void res.status(404).json({ error: 'not found' });
+  try {
+    const score = await withTimeout(endLesson(id), 60_000, 'end pending');
+    res.json({ scoreUrl: `/lesson/${id}/score`, score });
+  } catch {
+    res.status(409).json({ error: 'end pending' });
+  }
 });
 
 lessonsRouter.get('/lessons/:id/score', async (req, res) => {
   if (!/^[0-9a-f-]{36}$/i.test(req.params.id)) return void res.status(404).json({ error: 'not found' });
-  const score = await buildScore(req.params.id, false);
+  const id = String(req.params.id);
+  if (!(await getState(id))) return void res.status(404).json({ error: 'not found' });
+  const pending = endJobs.get(id);
+  const [l] = await db.select().from(lessons).where(eq(lessons.id, id)).limit(1);
+  if (!pending && !l.endedAt) return void res.status(409).json({ error: 'lesson not ended' });
+  let score: ScoreJson | null;
+  try { score = await withTimeout(pending ?? finalScore(id), 60_000, 'score pending'); }
+  catch { return void res.status(409).json({ error: 'score pending' }); }
   if (!score) return void res.status(404).json({ error: 'not found' });
   res.json({ ...score, topic: uploadedTopic(score.topic_id) });
 });
@@ -341,6 +398,7 @@ lessonsRouter.get('/lessons/:id/body', async (req, res) => {
 });
 
 lessonsRouter.get('/lessons/:id/debug', async (req, res) => {
+  if (!(await getState(String(req.params.id)))) return void res.status(404).json({ error: 'not found' });
   if (!/^[0-9a-f-]{36}$/i.test(req.params.id)) return void res.status(404).json({ error: 'not found' });
   const ts = await db.select().from(turns).where(eq(turns.lessonId, req.params.id)).orderBy(desc(turns.turnNo));
   res.json({ turns: ts.map((t) => ({ turnNo: t.turnNo, transcript: t.transcript, failsafe: t.failsafe, timings: t.timingsJson, judge: t.judgeJson })) });

@@ -18,6 +18,7 @@ export class Recorder {
   startedAt = 0;
   voicedMs = 0;
   private mime = '';
+  private settleStop: (() => void) | null = null;
   onLevel?: (i: LevelInfo) => void;
 
   constructor(stream: MediaStream) {
@@ -59,20 +60,31 @@ export class Recorder {
   private halt() { if (this.timer) clearInterval(this.timer); this.timer = null; this.onLevel?.({ level: 0, quiet: false, hot: false }); }
 
   async stop(extraMs = 0): Promise<RecResult | null> {
-    if (!this.rec) return null;
-    if (extraMs) await new Promise((r) => setTimeout(r, extraMs));
-    const rec = this.rec; this.rec = null;
-    const durationMs = this.elapsedMs;
-    const done = new Promise<void>((r) => (rec.onstop = () => r()));
-    try { rec.stop(); } catch { /* already stopped */ }
-    await done;
-    this.halt();
-    return { blob: new Blob(this.chunks, { type: this.mime }), mime: this.mime, durationMs, voicedMs: this.voicedMs };
+    try {
+      if (extraMs) await new Promise((r) => setTimeout(r, extraMs));
+      const rec = this.rec;
+      if (!rec) return null;
+      const durationMs = this.elapsedMs;
+      const ok = await new Promise<boolean>((resolve) => {
+        const finish = (success: boolean) => {
+          clearTimeout(timer); rec.onstop = null; rec.onerror = null;
+          this.settleStop = null; resolve(success);
+        };
+        const timer = setTimeout(() => finish(false), 3000);
+        this.settleStop = () => finish(false);
+        rec.onstop = () => finish(true);
+        rec.onerror = () => finish(false);
+        try { rec.stop(); } catch { finish(false); }
+      });
+      return ok ? { blob: new Blob(this.chunks, { type: this.mime }), mime: this.mime, durationMs, voicedMs: this.voicedMs } : null;
+    } finally { this.dispose(); }
   }
   cancel() {
+    this.settleStop?.();
     const rec = this.rec; this.rec = null;
     if (rec) { rec.onstop = null; try { rec.stop(); } catch { /* ignore */ } }
     this.halt();
+    try { this.src.disconnect(); this.analyser.disconnect(); } catch { /* ignore */ }
   }
   dispose() { this.cancel(); try { this.src.disconnect(); } catch { /* ignore */ } }
 }

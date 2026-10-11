@@ -90,6 +90,26 @@ export default function Classroom() {
   nudgesOnRef.current = nudgesOn;
 
   const genRef = useRef(0);
+  const active = useRef(true);
+  const mounted = useRef(true);
+  const timers = useRef(new Set<ReturnType<typeof setTimeout>>());
+  const valid = (gen: number) => active.current && genRef.current === gen;
+  const later = useCallback((fn: () => void, ms: number) => {
+    const gen = genRef.current;
+    const timer = setTimeout(() => {
+      timers.current.delete(timer);
+      if (active.current && genRef.current === gen) fn();
+    }, ms);
+    timers.current.add(timer);
+    return timer;
+  }, []);
+  const clearTimers = () => {
+    for (const t of timers.current) clearTimeout(t);
+    timers.current.clear();
+    for (const p of Object.values(pending.current)) if (p) clearTimeout(p.timer);
+    pending.current = {};
+    if (unlockTimer.current) clearTimeout(unlockTimer.current);
+  };
   const abortRef = useRef<() => void>(() => {});
   const recRef = useRef<Recorder | null>(null);
   const recTimer = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -116,7 +136,8 @@ export default function Classroom() {
   useEffect(() => {
     let alive = true;
     getLesson(id).then((l) => {
-      if (!alive) return;
+      if (!alive || !active.current) return;
+      if (l.lesson.ended) { active.current = false; nav(`/lesson/${id}/score`, { replace: true }); return; }
       setSettings({ lang: l.lesson.language, title: l.lesson.teacherTitle, topicId: l.lesson.topicId });
       const ls = demo ? DEFAULT_SETTING : normalizeSetting(l.lesson.setting);
       settingRef.current = ls; setSetting(ls); setBackRow(l.backRow ?? 0);
@@ -135,7 +156,7 @@ export default function Classroom() {
       setNeedTap(l.turnNo === 0 && !getMic() && !typeMode);
       if (typeMode) setTyping(true);
       setReady(true);
-    }).catch(() => nav('/'));
+    }).catch(() => { if (alive && active.current) nav('/'); });
     return () => { alive = false; };
   }, [id, nav]);
 
@@ -158,12 +179,13 @@ export default function Classroom() {
       if (ch.change !== 0) {
         const key = `${Date.now()}-${kid}`;
         patchView(kid, { delta: { n: ch.change, key }, hop: ch.change > 0, shake: ch.change < 0 });
-        setTimeout(() => patchView(kid, { delta: null, hop: false, shake: false }), 1100);
+        later(() => patchView(kid, { delta: null, hop: false, shake: false }), 1100);
         if (ch.change > 0) { ch.to === 2 ? sfx.gotIt() : sfx.badgeUp(); if (ch.to === 2) burst(kid); }
       }
     };
-    delay ? setTimeout(run, delay) : run();
-  }, [patchView]);
+    if (!active.current) return;
+    delay ? later(run, delay) : run();
+  }, [patchView, later]);
 
   const flushPending = useCallback((kid: KidId) => {
     const p = pending.current[kid];
@@ -175,9 +197,9 @@ export default function Classroom() {
 
   // ---------- turn ui ----------
   const makeUI = useCallback((gen: number): TurnUI => ({
-    stale: () => genRef.current !== gen,
+    stale: () => !valid(gen),
     onState: (ev: StateEvent) => {
-      if (genRef.current !== gen) return;
+      if (!valid(gen)) return;
       setTurnNo(ev.turnNo); turnNoRef.current = ev.turnNo;
       if (ev.backRow !== undefined) setBackRow(ev.backRow);
       const speakers = new Map(ev.speakers.map((s) => [s.kid, s.reason]));
@@ -199,7 +221,7 @@ export default function Classroom() {
         const ch = ev.levels[k];
         if (ch.change === 0 && ch.to === levelsRef.current[k]) continue;
         if (speakers.get(k) === 'aha' && ch.change > 0) {
-          pending.current[k] = { ch, timer: setTimeout(() => flushPending(k), 2500) };
+          pending.current[k] = { ch, timer: later(() => flushPending(k), 2500) };
         } else applyMove(k, ch, i++ * 140);
       }
       // card chips
@@ -216,7 +238,7 @@ export default function Classroom() {
       if (ev.chorus) patchAll({ thinking: false, hand: false });
     },
     onSpeakStart: (kid: KidId, line: LineEvent) => {
-      if (genRef.current !== gen) return;
+      if (!valid(gen)) return;
       flushPending(kid);
       setCaption({ kid, text: line.text, en: line.text_en });
       setViews((v) => {
@@ -228,26 +250,26 @@ export default function Classroom() {
       sfx.chalk();
     },
     onSpeakEnd: (kid: KidId) => {
-      if (genRef.current !== gen) return;
+      if (!valid(gen)) return;
       patchAll({ speaking: false, dim: false });
       void kid;
     },
     onFirstOutput: () => {
-      if (genRef.current !== gen) return;
+      if (!valid(gen)) return;
       if (unlockTimer.current) clearTimeout(unlockTimer.current);
       if (phaseRef.current === 'processing') setPhaseBoth('playing');
     },
     onChorus: (text, ph) => {
-      if (genRef.current !== gen) return;
+      if (!valid(gen)) return;
       setChorus({ text, phase: ph });
       if (ph === 'show') { patchAll({ thinking: false, hand: false, spotlight: true }); setCaption(null); }
       if (ph === 'stamp') sfx.stamp();
-      if (ph === 'hide') { patchAll({ spotlight: false }); setTimeout(() => setChorus(null), 300); }
+      if (ph === 'hide') { patchAll({ spotlight: false }); later(() => setChorus(null), 300); }
     },
-    onTimings: (t) => setLastTimings(t),
-    onEvent: (name, data) => setEventLog((l) => [...l.slice(-60), `${name} ${JSON.stringify(data).slice(0, 140)}`]),
+    onTimings: (t) => { if (valid(gen)) setLastTimings(t); },
+    onEvent: (name, data) => { if (valid(gen)) setEventLog((l) => [...l.slice(-60), `${name} ${JSON.stringify(data).slice(0, 140)}`]); },
     onDone: () => {
-      if (genRef.current !== gen) return;
+      if (!valid(gen)) return;
       for (const k of KID_IDS) flushPending(k);
       patchAll({ thinking: false, hand: false, speaking: false, dim: false });
       setHeard(false);
@@ -256,6 +278,7 @@ export default function Classroom() {
   }), [applyMove, flushPending, patchAll]);
 
   const submit = useCallback(async (text: string, source: 'voice' | 'typed', seconds: number) => {
+    if (!active.current) return;
     const gen = ++genRef.current;
     setTranscript(text); setMarks([]); setCaption(null); setHeard(source === 'voice');
     setPhaseBoth('processing');
@@ -263,36 +286,40 @@ export default function Classroom() {
     if (unlockTimer.current) clearTimeout(unlockTimer.current);
     unlockTimer.current = setTimeout(() => { if (phaseRef.current === 'processing' && genRef.current === gen) setPhaseBoth('playing'); }, 12000);
     await playTurn({ lessonId: id, text, source, seconds, lang: getSettings().lang, title: getSettings().title, ui: makeUI(gen), setAbort: (f) => (abortRef.current = f), setting: settingRef.current });
+    if (!valid(gen)) return;
   }, [id, makeUI, patchAll]);
 
   const localFailsafe = useCallback(async () => {
+    if (!active.current) return;
     const gen = ++genRef.current;
     setPhaseBoth('processing');
     const ui = makeUI(gen);
     await playLocalFailsafe(getSettings().lang, ui, 'omar', settingRef.current);
-    ui.onDone();
+    if (!valid(gen)) return;
   }, [makeUI]);
 
   // ---------- raised hands ----------
   const callOn = useCallback(async (kid: KidId) => {
-    if (phaseRef.current !== 'idle') return;
+    if (!active.current || phaseRef.current !== 'idle') return;
     const gen = ++genRef.current;
     setPhaseBoth('processing'); setCaption(null); setPopKid(null);
     patchAll({ raised: false, hand: false, speaking: false, dim: false });
     await unlockAudio();
+    if (!valid(gen)) return;
     await playQuestion({ lessonId: id, kid, lang: getSettings().lang, ui: makeUI(gen), setAbort: (f) => (abortRef.current = f), setting: settingRef.current });
+    if (!valid(gen)) return;
   }, [id, makeUI, patchAll]);
 
   const anyRaised = KID_IDS.some((k) => views[k]?.raised);
   useEffect(() => {
     if (!ready || needTap || demo || phase !== 'idle') return;
     if (anyRaised) {
-      const t = setTimeout(() => patchAll({ raised: false }), 15000);
+      const t = later(() => patchAll({ raised: false }), 15000);
       return () => clearTimeout(t);
     }
     // Never before the teacher has spoken, and at most one hand every other turn (every third in a large class).
     if (turnNo < 1 || turnNo - lastRaisedTurn.current < DIALS.handEveryTurns[isLarge(setting) ? 'large' : 'normal']) return;
-    const t = setTimeout(() => {
+    const t = later(() => {
       const lv = levelsRef.current;
       const lost = KID_IDS.filter((k) => (k === 'yazan' ? lv.yazan === 0 : lv[k] === 0));
       const pool = lost.length ? lost : KID_IDS.filter((k) => k !== 'yazan' && lv[k] < 2);
@@ -314,34 +341,46 @@ export default function Classroom() {
 
   // ---------- mic ----------
   const micError = (e: unknown) => {
+    if (!active.current) return;
     const n = (e as DOMException)?.name;
     setMicErr(n === 'NotAllowedError' || n === 'SecurityError' ? 'micDenied' : n === 'NotFoundError' ? 'micNone' : n === 'NotReadableError' ? 'micBusy' : 'micOther');
+    setTyping(true);
   };
+  useEffect(() => { if (typing && !needTap) typeRef.current?.focus(); }, [typing, needTap, micErr]);
   const requestMic = useCallback(async () => {
-    try { await openMic(); setMicErr(null); return true; } catch (e) { micError(e); return false; }
+    const gen = genRef.current;
+    try {
+      await openMic();
+      if (!valid(gen)) { if (!keepMic.current) closeMic(); return false; }
+      setMicErr(null); return true;
+    } catch (e) { if (valid(gen)) micError(e); return false; }
   }, []);
 
   const barge = () => {
     genRef.current++;
+    // a held "aha" badge move is applied now (not dropped), then every animation timer is cleared
+    for (const k of KID_IDS) flushPending(k);
+    clearTimers();
     abortRef.current();
     fadeOutAll(150);
-    patchAll({ speaking: false, dim: false, thinking: false, hand: false, raised: false });
+    patchAll({ speaking: false, dim: false, thinking: false, hand: false, raised: false, delta: null, hop: false, shake: false, spotlight: false });
     setChorus(null); setCaption(null);
-    for (const k of KID_IDS) flushPending(k);
   };
 
   const startRec = useCallback(async () => {
-    if (startingRec.current || phaseRef.current === 'recording') return;
+    if (!active.current || startingRec.current || phaseRef.current === 'recording') return;
     if (phaseRef.current === 'processing') return;
     startingRec.current = true;
+    const gen = genRef.current;
     try {
       let stream = getMic();
-      if (!stream) { if (!(await requestMic())) return; stream = getMic(); if (!stream) return; }
+      if (!stream) { if (!(await requestMic()) || !valid(gen)) return; stream = getMic(); if (!stream) return; }
       await unlockAudio();
+      if (!valid(gen)) return;
       barge();
       setNotice(null); setCancelling(false); setHeard(false);
       const rec = new Recorder(stream);
-      rec.onLevel = (i) => { setLevel(i.level); setInLevel(i.level); };
+      rec.onLevel = (i) => { if (active.current) { setLevel(i.level); setInLevel(i.level); } };
       rec.start();
       recRef.current = rec;
       if (standupRef.current) { collector.current.start(performance.now()); nudged.current = false; }
@@ -353,35 +392,41 @@ export default function Classroom() {
         setRecElapsed(e);
         if (e >= 45000) void stopRec(false);
       }, 100);
-    } catch (e) { micError(e); } finally { startingRec.current = false; }
+    } catch (e) { if (active.current) micError(e); } finally { startingRec.current = false; }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [requestMic]);
 
   const stopRec = useCallback(async (cancel: boolean) => {
+    const gen = genRef.current;
     const rec = recRef.current;
-    if (!rec || phaseRef.current !== 'recording') return;
-    recRef.current = null;
+    if (!active.current || !rec || phaseRef.current !== 'recording') return;
     if (recTimer.current) clearInterval(recTimer.current);
     setCancelling(false); setLevel(0); setRecElapsed(0);
     sfx.micOff();
     // stand-up mode: this turn's body numbers (only while the camera is running)
     let body: BodyMetrics | null = null;
     if (standupRef.current) { if (!cancel && getCamera().status === 'on') body = collector.current.finish(performance.now()); else collector.current.cancel(); }
-    if (cancel) { rec.cancel(); setPhaseBoth('idle'); return; }
+    if (cancel) { rec.cancel(); recRef.current = null; setPhaseBoth('idle'); return; }
     setPhaseBoth('processing');
     const res = await rec.stop(250);
     rec.dispose();
+    if (recRef.current === rec) recRef.current = null;
+    if (!valid(gen)) return;
     if (!res || res.durationMs < 350) { setNotice(tr('holdShort', getSettings().lang)); setPhaseBoth('idle'); return; }
     if (res.voicedMs < 300) { setNotice(tr('cantHear', getSettings().lang)); await localFailsafe(); return; }
     setHeard(true);
     patchAll({ thinking: true });
     try {
       const t = await transcribe(id, res.blob, res.mime, res.durationMs);
+      if (!valid(gen)) return;
       if (t.empty || !t.transcript.trim()) { setHeard(false); setNotice(tr('cantHear', getSettings().lang)); await localFailsafe(); return; }
       const before = turnNoRef.current;
+      const submittedGen = genRef.current + 1;
       await submit(t.transcript, 'voice', res.durationMs / 1000);
+      if (!valid(submittedGen)) return;
       if (body && turnNoRef.current > before) void postBody(id, turnNoRef.current, body).catch(() => {});
     } catch {
+      if (!valid(gen)) return;
       setHeard(false);
       await localFailsafe();
     }
@@ -389,11 +434,14 @@ export default function Classroom() {
 
   const submitTyped = async () => {
     const text = typed.trim();
-    if (!text || phaseRef.current === 'processing' || phaseRef.current === 'recording') return;
+    if (!active.current || !text || phaseRef.current === 'processing' || phaseRef.current === 'recording') return;
     setTyped('');
     typeRef.current?.focus();
     barge();
+    const gen = genRef.current;
+    setPhaseBoth('processing');
     await unlockAudio();
+    if (!valid(gen)) return;
     await submit(text, 'typed', Math.max(2, text.split(/\s+/).length * 0.4));
   };
 
@@ -473,6 +521,7 @@ export default function Classroom() {
     if (!standup) return;
     let shown = false, streak = 0;
     return onFrame((f) => {
+      if (!active.current) return;
       collector.current.add(f.t, f.live);
       if (f.raw.inFrame !== shown) { if (++streak >= 4) { shown = f.raw.inFrame; streak = 0; setInFrame(shown); } } else streak = 0;
       if (phaseRef.current !== 'recording' || nudged.current || !nudgesOnRef.current) return;
@@ -480,7 +529,7 @@ export default function Classroom() {
       if (!k) return;
       nudged.current = true;
       setNudge(k); clearTimeout(nudgeTimer.current);
-      nudgeTimer.current = setTimeout(() => setNudge(null), 3000);
+      nudgeTimer.current = later(() => setNudge(null), 3000);
     });
   }, [standup]);
   useEffect(() => { if (standup && cam.status === 'error') setNotice(tr('camStopped', getSettings().lang)); }, [standup, cam.status]);
@@ -500,36 +549,58 @@ export default function Classroom() {
     return () => g.dispose();
   }, [standup, sp.handsFree, ready, needTap, micErr, startRec, stopRec]);
 
-  useEffect(() => () => {
+  useEffect(() => {
+    mounted.current = true; active.current = true;
+    return () => {
+    mounted.current = false; active.current = false;
+    clearTimers();
     clearTimeout(nudgeTimer.current); stopCamera();
     genRef.current++; abortRef.current(); fadeOutAll(50); recRef.current?.dispose(); if (!keepMic.current) closeMic(); wake.current?.release().catch(() => {});
     if (recTimer.current) clearInterval(recTimer.current);
+    };
   }, []);
 
   // ---------- actions ----------
   const redo = async () => {
-    if (phaseRef.current !== 'idle' || turnNoRef.current === 0) return;
+    if (!active.current || phaseRef.current !== 'idle' || turnNoRef.current === 0) return;
     barge();
+    const gen = genRef.current;
+    setPhaseBoth('processing');
     try {
       const r = await redoTurn(id);
+      if (!valid(gen)) return;
       setLv(r.levels); setTurnNo(r.turnNo); turnNoRef.current = r.turnNo;
-      if (isLarge(settingRef.current)) getLesson(id).then((l) => setBackRow(l.backRow ?? 0)).catch(() => {});
+      if (isLarge(settingRef.current)) {
+        const l = await getLesson(id).catch(() => null);
+        if (!valid(gen)) return;
+        if (l) setBackRow(l.backRow ?? 0);
+      }
       tallyHist.current.length = r.turnNo + 1; lastRaisedTurn.current = -2;
       setTally(tallyHist.current[r.turnNo] ?? 0);
       setTranscript(''); setMarks([]); setViews({});
-      setNotice(tr('redo', getSettings().lang));
-      setTimeout(() => setNotice(null), 1500);
-    } catch { /* keep state */ }
+      setNotice(tr('redoDone', getSettings().lang));
+      later(() => setNotice(null), 1500);
+    } catch { /* keep state */ } finally { if (valid(gen)) setPhaseBoth('idle'); }
   };
   const finish = async () => {
+    if (!active.current) return;
+    active.current = false;
     setEnding(true); barge();
+    recRef.current?.cancel(); recRef.current = null;
+    if (recTimer.current) clearInterval(recTimer.current);
+    const gen = genRef.current;
     try { await endLesson(id); } catch { /* score route builds it */ }
+    if (!mounted.current || genRef.current !== gen) return;
     nav(`/lesson/${id}/score`);
   };
   const tapStart = async () => {
+    if (!active.current) return;
+    const gen = genRef.current;
     await unlockAudio();
+    if (!valid(gen)) return;
     void preloadLesson(settings.topicId, settings.lang, settings.title);
     await requestMic();
+    if (!valid(gen)) return;
     setNeedTap(false);
     sfx.bell();
   };
@@ -538,24 +609,35 @@ export default function Classroom() {
   // stage: N goes back to the plan page with the mic and audio kept open
   const newLesson = () => { keepMic.current = true; nav('/plan/lib-fractions?demo=1'); };
   const chorusOnly = async () => {
-    if (phaseRef.current !== 'idle') return;
+    if (!active.current || phaseRef.current !== 'idle') return;
     const gen = ++genRef.current;
+    setPhaseBoth('processing');
     const ui = makeUI(gen);
     await unlockAudio();
+    if (!valid(gen)) return;
     await playChorus(getSettings().lang, getSettings().title, ui, settingRef.current);
+    if (!valid(gen)) return;
   };
   const sendScript = async (n: number) => {
     const line = demoScript.find((l) => l.n === n);
-    if (!line || phaseRef.current === 'processing' || phaseRef.current === 'recording') return;
+    if (!active.current || !line || phaseRef.current === 'processing' || phaseRef.current === 'recording') return;
     barge();
+    const gen = genRef.current;
+    setPhaseBoth('processing');
     await unlockAudio();
+    if (!valid(gen)) return;
     const text = line[getSettings().lang];
     await submit(text, 'typed', Math.max(2, text.split(/\s+/).length * 0.4));
   };
   const revealNow = async () => {
-    if (turnNoRef.current === 0) return;
+    if (!active.current || turnNoRef.current === 0) return;
+    active.current = false;
     setEnding(true); barge();
+    recRef.current?.cancel(); recRef.current = null;
+    if (recTimer.current) clearInterval(recTimer.current);
+    const gen = genRef.current;
     try { await endLesson(id); } catch { /* score route builds it */ }
+    if (!mounted.current || genRef.current !== gen) return;
     nav(`/lesson/${id}/score?reveal=1`);
   };
   act.current = { redo: () => void redo(), end: () => { if (turnNoRef.current > 0) setConfirmEnd(true); }, reveal: () => void revealNow(), newLesson: () => void newLesson(), chorusOnly: () => void chorusOnly(), script: (n) => void sendScript(n) };
@@ -586,8 +668,8 @@ export default function Classroom() {
         <a className="logo" href="/" onClick={(e) => { e.preventDefault(); if (turnNo > 0) setConfirmEnd(true); else nav('/'); }}>{lang === 'ar' ? 'سبّورة' : 'Sabboura'}</a>
         <div className="center">
           <span>{tr('turn', lang)} <bdi dir="ltr" className="num">{fmtNum(turnNo, lang)}</bdi></span>
-          <span className="meter-dots" aria-label={`${reached}/4`}>{counted.map((k) => <i key={k} className={levels[k] === 2 ? 'on' : ''} />)}</span>
-          <span className="meter-txt">{tr('reachedMeter', lang)} <bdi dir="ltr" className="num">{reached}</bdi> {tr('ofN', lang)} <bdi dir="ltr" className="num">4</bdi></span>
+          <span className="meter-dots" aria-label={`${reached}/4`} title={tr('meterHint', lang)}>{counted.map((k) => <i key={k} className={levels[k] === 2 ? 'on' : ''} />)}</span>
+          <span className="meter-txt" title={tr('meterHint', lang)}>{tr('reachedMeter', lang)} <bdi dir="ltr" className="num">{reached}</bdi> {tr('ofN', lang)} <bdi dir="ltr" className="num">4</bdi></span>
           {!stage && (
             <span className="plan-pill-wrap">
               <button className="chip plan-pill" aria-expanded={planOpen} onClick={() => setPlanOpen((x) => !x)}>{tr('myPlan', lang)}</button>
@@ -664,18 +746,21 @@ export default function Classroom() {
         ) : (
           <div className="side end">
             {standup
-              ? <SelfTile lang={lang} inFrame={inFrame} nudge={nudge} nudgesOn={nudgesOn} calm={settings.calm} onNudges={(on) => setStandup({ nudges: on })} />
+              ? <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                  <SelfTile lang={lang} inFrame={inFrame} nudge={nudge} nudgesOn={nudgesOn} calm={settings.calm} onNudges={(on) => setStandup({ nudges: on })} />
+                  <button className="btn" style={{ padding: '6px 8px', fontSize: '.8rem' }} onClick={() => setTyping(true)}><Keyboard size={16} />{tr('typeInsteadShort', lang)}</button>
+                </div>
               : <button className="btn btn-type" onClick={() => setTyping(true)}><Keyboard size={18} /> <span className="txt">{tr('typeBtn', lang)}</span></button>}
           </div>
         )}
       </footer>
-      {notice && !typing && <div className="notice" role="status">{notice}</div>}
+      {notice && <div className="notice" role="status">{notice}</div>}
       {micErr && !needTap && (
-        <div className="mic-card" role="alert">
+        <div className="mic-card" role="status">
           <b>{tr(micErr as 'micDenied', lang)}</b>
           <div className="actions" style={{ display: 'flex', gap: 10, marginTop: 10 }}>
             <button className="btn" onClick={() => void requestMic()}>{tr('tryAgain', lang)}</button>
-            <button className="btn btn-outline" onClick={() => { setMicErr(null); setTyping(true); }}>{tr('typeInsteadShort', lang)}</button>
+            <button className="btn btn-outline" onClick={() => setMicErr(null)}>{tr('typeInsteadShort', lang)}</button>
           </div>
         </div>
       )}

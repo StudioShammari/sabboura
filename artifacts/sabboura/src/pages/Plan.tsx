@@ -64,6 +64,8 @@ export default function Plan() {
   // an uploaded lesson: the pack (from the server) decides the topic, plan defaults and language
   const [pack, setPack] = useState<PackInfo | null>(null);
   const [packGone, setPackGone] = useState(false);
+  const [packErr, setPackErr] = useState(false);
+  const [packTry, setPackTry] = useState(0);
   const [drafting, setDrafting] = useState(false);
   const topicId = isLib ? packId.slice(4) : pack?.topic?.id ?? pack?.libraryTopicId ?? '';
   const topic = isLib ? topics.find((t) => t.id === topicId) : undefined;
@@ -88,15 +90,24 @@ export default function Plan() {
   useEffect(() => {
     if (isLib) return;
     let live = true;
-    getPack(packId).then((r) => {
+    let t: ReturnType<typeof setTimeout> | undefined;
+    setPackErr(false);
+    // a pack still being drafted (e.g. the page was reloaded mid-upload) is polled until it settles
+    const load = () => getPack(packId).then((r) => {
       if (!live) return;
+      if (r.status === 'working') { t = setTimeout(load, 2000); return; }
       if (r.status !== 'ready' || !r.pack) { setPackGone(true); return; }
       if (r.pack.topic) registerTopic(r.pack.topic);
       setSettings({ lang: r.pack.language, topicId: r.pack.topic?.id ?? r.pack.libraryTopicId ?? 'fractions' });
       setPack(r.pack);
-    }).catch(() => live && setPackGone(true));
-    return () => { live = false; };
-  }, [isLib, packId]);
+    }).catch((e) => {
+      if (!live) return;
+      // a missing pack is gone for good; anything else (network, server) can be retried
+      if (/\b404\b/.test(String((e as Error)?.message))) setPackGone(true); else setPackErr(true);
+    });
+    void load();
+    return () => { live = false; clearTimeout(t); };
+  }, [isLib, packId, packTry]);
 
   // re-teach: open pre-filled with the plan of the lesson being reviewed
   useEffect(() => {
@@ -128,6 +139,8 @@ export default function Plan() {
       clearPlan(packId, np.language);
       setPack(np);
       setPlan(swapPlan({ goal: np.plan.objective, steps: np.plan.steps.map((x) => ({ ...x })) }, DEFAULT_SETTING, setting));
+      // the new draft is a new pack: the address (and the lesson it starts) must follow it
+      if (np.id !== packId) nav(`/plan/${np.id}${location.search}`, { replace: true });
     } catch { setFailed(true); }
     setDrafting(false);
   };
@@ -211,13 +224,35 @@ export default function Plan() {
     return () => window.removeEventListener('keydown', f);
   }, [demo]);
 
+  // Escape closes the microphone window
+  useEffect(() => {
+    if (!card) return;
+    const f = (e: KeyboardEvent) => { if (e.code === 'Escape') setCard(null); };
+    window.addEventListener('keydown', f);
+    return () => window.removeEventListener('keydown', f);
+  }, [card]);
+
   if (!isLib && packGone) return (
-    <main className="plan-page"><div className="paper-card" style={{ margin: 'auto', textAlign: 'center' }}>
+    <main className="plan-page plan-state"><div className="paper-card" style={{ margin: 'auto', textAlign: 'center' }}>
       <p>{tr('packMissing', lang)}</p><Link href="/" className="btn btn-primary">{tr('changeMaterial', lang)}</Link>
     </div></main>
   );
-  if (isLib ? !topic : !pack) return null;
+  if (!isLib && packErr) return (
+    <main className="plan-page plan-state"><div className="paper-card" role="alert" style={{ margin: 'auto', textAlign: 'center' }}>
+      <p>{tr('planLoadFail', lang)}</p>
+      <div className="actions" style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
+        <button type="button" className="btn btn-primary" onClick={() => setPackTry((n) => n + 1)}>{tr('tryAgain', lang)}</button>
+        <Link href="/" className="btn">{tr('home', lang)}</Link>
+      </div>
+    </div></main>
+  );
+  if (!isLib && !pack) return (
+    <main className="plan-page plan-state"><div className="paper-card" role="status" style={{ margin: 'auto', textAlign: 'center' }}><p>{tr('planLoading', lang)}</p></div></main>
+  );
+  if (isLib && !topic) return null;
   const readOnly = demo;
+  const filled = plan.steps.filter((st) => st.text.trim()).length;
+  const emptyStep = !readOnly && filled < plan.steps.length;
   const errKey = card === 'denied' ? 'micDenied' : card === 'none' ? 'micNone' : card === 'busy' ? 'micBusy' : 'micOther';
 
   return (
@@ -261,6 +296,7 @@ export default function Plan() {
             </li>
           ))}
         </ol>
+        {emptyStep && <p className="nb-empty" role="status">{tr('planEmptyStep', lang)}</p>}
         {tips.length > 0 && !readOnly && (
           <ul className="nb-tips" aria-live="polite">
             {tips.map((t) => <li key={t.key}>{t.key === 'yesno' ? trf('tip_yesno', lang, { phrase: t.phrase ?? '' }) : tr(`tip_${t.key}` as Key, lang)}</li>)}
@@ -310,7 +346,7 @@ export default function Plan() {
         </SettingProvider>
         <div className="plan-go">
           {failed && <div role="alert" className="muted">{tr('startFailed', lang)}</div>}
-          <button className="btn btn-primary" onClick={() => void start()} disabled={busy || (!demo && plan.steps.length === 0)}>{busy ? tr('loading', lang) : tr('start', lang)}</button>
+          <button className="btn btn-primary" onClick={() => void start()} disabled={busy || (!demo && filled === 0)}>{busy ? tr('loading', lang) : tr('start', lang)}</button>
         </div>
       </section>
 
@@ -321,6 +357,7 @@ export default function Plan() {
               <div className="actions"><button className="btn btn-primary" style={{ fontSize: '1.1rem' }} onClick={() => void go(true)}>{tr('micAllow', lang)}</button><button className="btn" onClick={() => void go(false)}>{tr('typeInstead', lang)}</button></div></>)
               : (<><h2>{tr('micTitle', lang)}</h2><p>{tr(errKey, lang)}</p>
                 <div className="actions"><button className="btn btn-primary" style={{ fontSize: '1.1rem' }} onClick={() => void go(true)}>{tr('tryAgain', lang)}</button><button className="btn" onClick={() => void go(false)}>{tr('typeInsteadShort', lang)}</button></div></>)}
+            <button type="button" className="text-link modal-back-link" onClick={() => setCard(null)}>{tr('backToPlan', lang)}</button>
           </div>
         </div>
       )}

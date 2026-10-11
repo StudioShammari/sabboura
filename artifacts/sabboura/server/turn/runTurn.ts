@@ -11,7 +11,7 @@ import { westernDigits } from '../lib/arabic';
 import { since } from '../lib/timing';
 import { applyLevels } from '../rules/levels';
 import { chooseSpeakers, linaUnheard } from '../rules/speakers';
-import type { LessonState } from './state';
+import { beginWork, isClosed, type LessonState } from './state';
 
 export const TURN_BUDGET_MS = 16000;
 
@@ -27,11 +27,14 @@ export interface TurnCtx {
 export async function* runTurn(ctx: TurnCtx): AsyncGenerator<TurnEvent> {
   const { state } = ctx;
   const T0 = performance.now();
-  if (state.busy) {
-    yield { event: 'busy', data: {} };
+  const release = beginWork(state.id);
+  if (!release) {
+    if (isClosed(state.id)) yield { event: 'done', data: { turnNo: state.turnNo } };
+    else yield { event: 'busy', data: {} };
     return;
   }
   state.busy = true;
+  let pendingWrite: Promise<unknown> | undefined;
   try {
     const turnNo = state.turnNo + 1;
     const transcript = westernDigits(ctx.text).trim().slice(0, 1500);
@@ -164,6 +167,7 @@ export async function* runTurn(ctx: TurnCtx): AsyncGenerator<TurnEvent> {
       outLines.forEach((l, i) => lineRows.push({ idx: i, kid: l.kid, reason: l.reason, text: l.text, text_en: l.text_en, say: l.say, source: l.source }));
       return save();
     })();
+    pendingWrite = dbPromise;
     const voiceP = outLines.map((l) => speak(l.kid, state.language, l.say, ctx.signal, state.setting.group));
     for (let i = 0; i < outLines.length; i++) {
       const l = outLines[i];
@@ -198,6 +202,9 @@ export async function* runTurn(ctx: TurnCtx): AsyncGenerator<TurnEvent> {
     yield { event: 'timings', data: { ...timings, turnNo } };
     yield { event: 'done', data: { turnNo } };
   } finally {
+    // A voice or stream failure must not release End while persistence is running.
+    await pendingWrite;
     state.busy = false;
+    release();
   }
 }

@@ -2,12 +2,14 @@ import { type KidId } from '../../shared/data';
 import type { LineEvent, TurnEvent } from '../../shared/schemas';
 import { cannedLine, generateLines } from '../ai/kidLines';
 import { speak } from '../ai/tts';
-import type { LessonState } from './state';
+import { beginWork, isClosed, type LessonState } from './state';
 
 /** A kid with a raised hand has been called on: ask one question. No judging, no level change, nothing saved. */
 export async function* runQuestion(state: LessonState, kid: KidId, signal?: AbortSignal): AsyncGenerator<TurnEvent> {
-  if (state.busy) {
-    yield { event: 'busy', data: {} };
+  const release = beginWork(state.id);
+  if (!release) {
+    if (!isClosed(state.id)) yield { event: 'busy', data: {} };
+    yield { event: 'done', data: { turnNo: state.turnNo } };
     return;
   }
   state.busy = true;
@@ -41,5 +43,6 @@ export async function* runQuestion(state: LessonState, kid: KidId, signal?: Abor
     yield { event: 'done', data: { turnNo } };
   } finally {
     state.busy = false;
+    release();
   }
 }

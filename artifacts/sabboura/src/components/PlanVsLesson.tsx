@@ -15,7 +15,7 @@ function Mark({ status, lang }: { status: PlanRow['status']; lang: Lang }) {
       <circle cx="13" cy="13" r="11" fill="var(--action)" clipPath="url(#half)" /><circle cx="13" cy="13" r="11" fill="none" stroke="var(--action)" strokeWidth="2.4" />
     </svg>
   );
-  if (status === 'not_yet') return <span className="notyet">{lang === 'ar' ? 'ليس بعد' : 'Not yet'}</span>;
+  if (status === 'not_yet') return <span className="notyet">{tr('notYet', lang)}</span>;
   if (status === 'pending') return <span className="pending">{tr('checking', lang)}</span>;
   return <span className="pending">—</span>;
 }

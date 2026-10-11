@@ -635,3 +635,18 @@ table.replay button.sel { border-color: var(--action); }
 @media (max-width: 520px) { .sc-stats { grid-template-columns: minmax(0, 1fr); } .school { padding-inline: 14px; } }
 .home-foot .text-link { font-size: .85rem; font-weight: 500; }
 html:has(.school) body { background-image: none; background-color: #F6F3EC; }
+
+/* review pass: small states and hints */
+.paste-min { color: var(--ink-muted); font-weight: 500; font-size: .95rem; }
+.nb-empty { margin: 4px 0 0; color: var(--ink-muted); font-weight: 600; font-size: .95rem; }
+.modal-back-link { display: block; margin: 12px auto 0; }
+.replay-legend { margin: 8px 0 0; color: var(--ink-muted); font-weight: 500; font-size: .95rem; }
+table.replay { min-width: 100%; }
+.copy-fallback { display: grid; gap: 6px; font-weight: 600; color: var(--ink-muted); }
+.copy-fallback input { font: inherit; color: var(--ink); background: var(--notebook); border: 2px solid var(--line-strong); border-radius: 12px; padding: 8px 10px; width: min(560px, 100%); }
+@media (max-width: 767px) { .home-qr { display: none; } }
+.plan-page.plan-state { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); place-items: center; min-height: 100dvh; height: auto; }
+.plan-state .paper-card { width: min(480px, 100%); display: grid; gap: 12px; justify-items: center; }
+.plan-state .paper-card p { margin: 0; }
+/* notices stay visible while typing; on phones they sit above the taller typing dock */
+@media (max-width: 767px) { .classroom .notice { bottom: calc(168px + env(safe-area-inset-bottom)); } .classroom.typing .notice { bottom: calc(256px + env(safe-area-inset-bottom)); } }

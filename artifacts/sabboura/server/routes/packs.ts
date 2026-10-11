@@ -19,6 +19,13 @@ packsRouter.post('/packs', (req: Request, res: Response, next: NextFunction) => 
     next();
   });
 }, async (req: Request, res: Response) => {
+  for (const key of ['from', 'to']) {
+    if (req.body?.[key] !== undefined && (!['string', 'number'].includes(typeof req.body[key]) || !Number.isInteger(Number(req.body[key])) || Number(req.body[key]) < 1)) {
+      return void res.status(400).json({ error: 'page_range', reason: 'page_range' });
+    }
+  }
+  if (req.body?.text !== undefined && typeof req.body.text !== 'string') return fail(res, 400, 'unreadable');
+  if (req.body?.fileName !== undefined && typeof req.body.fileName !== 'string') return fail(res, 400, 'unreadable');
   const language = req.body?.language === 'en' ? 'en' : 'ar';
   const wantFrom = Math.max(1, Math.floor(Number(req.body?.from)) || 1);
   const wantTo = Math.floor(Number(req.body?.to)) || wantFrom + PACK_MAX_PAGES - 1;

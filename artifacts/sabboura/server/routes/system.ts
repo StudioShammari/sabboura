@@ -16,8 +16,15 @@ export const systemRouter = Router();
 systemRouter.get('/health', (_req, res) => void res.json({ ok: true }));
 
 let warmCache: { at: number; body: unknown } | null = null;
-systemRouter.get('/warmup', async (req, res) => {
-  if (warmCache && Date.now() - warmCache.at < 60_000 && req.query.force !== '1') return void res.json(warmCache.body);
+let warmJob: Promise<unknown> | null = null;
+systemRouter.get('/warmup', async (_req, res) => {
+  // Public force=1 is subject to the same global cooldown as the stage check.
+  if (warmCache && Date.now() - warmCache.at < 60_000) return void res.json(warmCache.body);
+  warmJob ??= probeWarmup().finally(() => { warmJob = null; });
+  res.json(await warmJob);
+});
+
+async function probeWarmup() {
   const ms: Record<string, number | null> = { db: null, judge: null, lines: null, tts: null, stt: null };
   const errors: Record<string, string> = {};
   const timed = async (k: string, fn: () => Promise<unknown>) => {
@@ -27,7 +34,8 @@ systemRouter.get('/warmup', async (req, res) => {
   const levels = startLevels('fractions');
   let mp3: string | null = null;
   await timed('db', () => db.execute(sql`select 1`));
-  const probe = hasAnthropic() ? await probeModels() : {};
+  let probe: Awaited<ReturnType<typeof probeModels>> | {} = {};
+  await timed('probe', async () => { if (hasAnthropic()) probe = await probeModels(); });
   await Promise.all([
     timed('judge', async () => {
       const r = await judgeTurn({ topicId: 'fractions', levels, transcript: 'نص أكبر من تلت لأن القطع بتصير أكبر', previous: [] });
@@ -46,8 +54,8 @@ systemRouter.get('/warmup', async (req, res) => {
     structured: aiState.structured, ms, errors, probe, credentials: { anthropic: hasAnthropic(), openai: hasOpenAI() },
   };
   warmCache = { at: Date.now(), body };
-  res.json(body);
-});
+  return body;
+}
 
 const TtsBody = z.object({ kid: z.enum(KID_IDS), text: z.string().min(1).max(300), lang: z.enum(['ar', 'en']).default('ar'), group: z.enum(['mixed', 'boys', 'girls']).default('mixed') });
 

@@ -9,7 +9,7 @@ import { StateBall } from '@/components/StateBall';
 import { badgeLabel } from '@shared/data';
 import { fmtNum, mmss, moveLabel, tr, trf, useT } from '@/i18n';
 import { SettingProvider, setClassSetting } from '@/lib/classSetting';
-import { createLesson, getBody, getPlanCheck, getReplay, getScore, type PlanCheckResp, type Replay } from '@/lib/api';
+import { createLesson, endLesson, getBody, getPlanCheck, getReplay, getScore, type PlanCheckResp, type Replay } from '@/lib/api';
 import type { BodyResult } from '@shared/bodyNotes';
 import { BodyNotes } from '@/components/BodyNotes';
 import { PlanVsLesson } from '@/components/PlanVsLesson';
@@ -31,7 +31,11 @@ function stampWord(ok: boolean, gender: 'm' | 'f') {
   return ok ? (gender === 'f' ? 'فهمت' : 'فهم') : (gender === 'f' ? 'ما زالت تفكّر' : 'ما زال يفكّر');
 }
 function nAr(n: number) { return n === 1 ? 'مرة وحدة' : n === 2 ? 'مرتين' : n <= 10 ? `${n} مرات` : `${n} مرة`; }
-function qAr(n: number) { return n === 1 ? 'سؤال حقيقي واحد' : n === 2 ? 'سؤالين حقيقيين' : `${n} أسئلة حقيقية`; }
+function qAr(n: number) { return n === 1 ? 'سؤال حقيقي واحد' : n === 2 ? 'سؤالين حقيقيين' : n <= 10 ? `${n} أسئلة حقيقية` : `${n} سؤالاً حقيقياً`; }
+/** The HTTP status inside an api error ("bad response 409"), or 0 for a network failure. */
+const statusOf = (e: unknown) => Number(/\b(\d{3})\b/.exec(String((e as Error)?.message))?.[1] ?? 0);
+/** Keeps a number range (e.g. 3–5) in reading order inside Arabic text. */
+const ltr = (s: string) => `\u2066${s}\u2069`;
 function nEn(n: number) { return n === 1 ? 'once' : n === 2 ? 'twice' : `${n} times`; }
 
 export function reachedSentence(lang: Lang, R: number, P: number, yazan: Level, setting: ClassSetting = DEFAULT_SETTING) {
@@ -94,6 +98,11 @@ export default function Review() {
   const shared = useMemo(() => new URLSearchParams(location.search).get('shared') === '1', []);
   const [score, setScore] = useState<ScoreJson | null>(null);
   const [missing, setMissing] = useState(false);
+  const [loadErr, setLoadErr] = useState(false);
+  const [loadTry, setLoadTry] = useState(0);
+  const [starting, setStarting] = useState(false);
+  const [startErr, setStartErr] = useState(false);
+  const [copyUrl, setCopyUrl] = useState<string | null>(null);
   const [open, setOpen] = useState<string | null>(null);
   const [flipped, setFlipped] = useState<Set<KidId>>(new Set());
   const [revealed, setRevealed] = useState(false);
@@ -107,9 +116,30 @@ export default function Review() {
   const [body, setBody] = useState<{ standup: boolean; result: BodyResult | null } | null>(null);
 
   useEffect(() => {
-    getScore(id).then((s) => { setScore(s); setSettings({ lang: s.language, title: s.teacher_title, topicId: s.topic_id }); }).catch(() => setMissing(true));
-    getReplay(id).then(setReplay).catch(() => {});
-  }, [id]);
+    let live = true; let tries = 0; let endAsked = false;
+    let t: ReturnType<typeof setTimeout> | undefined;
+    setLoadErr(false);
+    const load = async () => {
+      try {
+        const s = await getScore(id);
+        if (!live) return;
+        setScore(s); setSettings({ lang: s.language, title: s.teacher_title, topicId: s.topic_id });
+        getReplay(id).then((r) => live && setReplay(r)).catch(() => {});
+      } catch (e) {
+        if (!live) return;
+        const st = statusOf(e);
+        if (st === 404 || st === 400) { setMissing(true); return; }
+        if (st === 409) {
+          // the lesson was left without pressing End (or End is still finishing): end it, then wait for the score
+          if (!endAsked && !shared) { endAsked = true; await endLesson(id).catch(() => {}); if (live) void load(); return; }
+          if (++tries < 15) { t = setTimeout(() => void load(), 2000); return; }
+        }
+        setLoadErr(true);
+      }
+    };
+    void load();
+    return () => { live = false; clearTimeout(t); };
+  }, [id, shared, loadTry]);
   // body language notes: personal, so never fetched for the shared view
   useEffect(() => { if (!shared) getBody(id).then(setBody).catch(() => {}); }, [id, shared]);
   // the plan checklist: code rows arrive at once, AI rows later
@@ -151,7 +181,15 @@ export default function Review() {
     setFlipped(new Set(KID_IDS)); document.documentElement.dataset.instantFlip = '1';
   }, [score]);
   if (missing) return <main className="review"><div className="panel"><p>{t('notFound')}</p><button className="btn btn-primary" onClick={() => nav('/')}>{t('home')}</button></div></main>;
-  if (!score) return <main className="review"><div className="panel fade-in">{t('loading')}</div></main>;
+  if (loadErr) return (
+    <main className="review"><div className="panel" role="alert"><p>{t('reviewLoadFail')}</p>
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+        <button className="btn btn-primary" onClick={() => setLoadTry((n) => n + 1)}>{t('tryAgain')}</button>
+        <button className="btn" onClick={() => nav('/')}>{t('home')}</button>
+      </div>
+    </div></main>
+  );
+  if (!score) return <main className="review"><div className="panel fade-in" role="status">{t('reviewFinishing')}</div></main>;
 
   const L = score.language;
   const setting = normalizeSetting(score.setting);
@@ -170,18 +208,23 @@ export default function Review() {
     for (const k of REVEAL_ORDER) { setFlipped((s) => new Set(s).add(k)); sfx.flip(); await sleep(150); }
   };
   const again = async (keepPlan: boolean) => {
+    if (starting) return;
     // a stand-up lesson goes back through the Plan page, where the camera is set up again
     if (keepPlan && body?.standup) { setClassSetting(setting); nav(`/plan/${pc?.packId ?? `lib-${score.topic_id}`}?from=${id}`); return; }
-    await unlockAudio();
-    try { await openMic(); } catch { /* typing is still possible */ }
-    const withPlan = keepPlan && pc?.packId && pc.plan ? { packId: pc.packId, plan: pc.plan } : { topicId: score.topic_id };
-    const r = await createLesson({ ...withPlan, language: score.language, teacherTitle: score.teacher_title, deviceId: deviceId(), previousLessonId: id, setting });
-    nav(`/lesson/${r.lessonId}`);
+    setStarting(true); setStartErr(false);
+    try {
+      await unlockAudio();
+      try { await openMic(); } catch { /* typing is still possible */ }
+      const withPlan = keepPlan && pc?.packId && pc.plan ? { packId: pc.packId, plan: pc.plan } : { topicId: score.topic_id };
+      const r = await createLesson({ ...withPlan, language: score.language, teacherTitle: score.teacher_title, deviceId: deviceId(), previousLessonId: id, setting });
+      nav(`/lesson/${r.lessonId}`);
+    } catch { setStartErr(true); setStarting(false); }
   };
   const share = async () => {
     const url = `${location.origin}/s/${id}`;
-    try { if (navigator.share) { await navigator.share({ url, title: 'Sabboura' }); return; } } catch { /* fall back to copy */ }
-    try { await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch { /* ignore */ }
+    try { if (navigator.share) { await navigator.share({ url, title: 'Sabboura' }); return; } } catch (e) { if ((e as Error)?.name === 'AbortError') return; /* fall back to copy */ }
+    try { await navigator.clipboard.writeText(url); setCopied(true); setCopyUrl(null); setTimeout(() => setCopied(false), 2000); }
+    catch { setCopyUrl(url); /* clipboard blocked: show the link so it can be copied by hand */ }
   };
   const laNote = (m: ScoreMove): string | null => {
     if (m.note) return m.note;
@@ -192,7 +235,7 @@ export default function Review() {
   };
 
   const bk = score.back_row;
-  const backLine = bk ? (bk.drift.length ? trf('reviewBackDrift', L, { turns: bk.drift.map(([a, b]) => (a === b ? fmtNum(a, L) : `${fmtNum(a, L)}–${fmtNum(b, L)}`)).join(L === 'ar' ? '، ' : ', ') }) : tr('reviewBackStayed', L)) : null;
+  const backLine = bk ? (bk.drift.length ? trf('reviewBackDrift', L, { turns: bk.drift.map(([a, b]) => (a === b ? fmtNum(a, L) : ltr(`${fmtNum(a, L)}–${fmtNum(b, L)}`))).join(L === 'ar' ? '، ' : ', ') }) : tr('reviewBackStayed', L)) : null;
   const ai = score.ai;
   const sir = score.teacher_title === 'sir';
   const selTurn = replay?.turns.find((x) => x.turnNo === sel) ?? null;
@@ -206,7 +249,7 @@ export default function Review() {
       </div>
       <Stepper current={2} lang={L} />
 
-      <section className="panel" aria-label="class">
+      <section className="panel" aria-label={tr('reviewClassWord', L)}>
         <div className={`review-class ${phone && revealed ? 'list' : ''}`}>
           {KID_IDS.map((k) => {
             const def = kidIdentity(k, setting), tk = topic.kids[k], lv = fl[k] as Level, ok = lv === 2;
@@ -327,7 +370,7 @@ export default function Review() {
                         <td key={x.turnNo} className={x.checkType === 'yes_no' ? 'frozen' : ''}>
                           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, borderRadius: 999, outline: x.askedKid === k ? '2px solid var(--ink)' : undefined, outlineOffset: 2 }}>
                             <StateBall level={c.to as Level} kid={k} size={28} onSolid={false} />
-                            {c.change > 0 && <b aria-label="up">↑</b>}{c.change < 0 && <b aria-label="down">↓</b>}
+                            {c.change > 0 && <b aria-label={L === 'ar' ? 'تقدّم' : 'moved up'}>↑</b>}{c.change < 0 && <b aria-label={L === 'ar' ? 'رجع' : 'moved down'}>↓</b>}
                           </span>
                         </td>
                       );
@@ -337,6 +380,7 @@ export default function Review() {
               </tbody>
             </table>
           </div>
+          <p className="replay-legend">{tr('replayLegend', L)} <span aria-hidden="true">●</span> {L === 'ar' ? 'سؤال حقيقي' : 'real question'} · <span aria-hidden="true">◇</span> {L === 'ar' ? 'سؤال آه أو لا' : 'yes/no check'}</p>
           {selTurn && (
             <div className="fade-in" style={{ marginTop: 12 }}>
               <p className="quote"><b>{tr('turn', L)} <bdi dir="ltr">{selTurn.turnNo}</bdi>:</b> «{selTurn.transcript}»</p>
@@ -351,12 +395,14 @@ export default function Review() {
         {shared
           ? <button className="btn btn-primary" onClick={() => nav('/')}>{tr('tryPractice', L)}</button>
           : <>
-              <button className="btn btn-primary" onClick={() => void again(true)}>{tr('teachAgain', L)}</button>
+              <button className="btn btn-primary" onClick={() => void again(true)} disabled={starting} aria-busy={starting}>{starting ? tr('starting', L) : tr('teachAgain', L)}</button>
               {pc?.packId && pc.plan && <button className="btn" onClick={() => { setClassSetting(setting); nav(`/plan/${pc.packId}?from=${id}`); }}>{tr('editPlanAgain', L)}</button>}
             </>}
         <button className="btn" onClick={() => void share()}>{copied ? tr('copied', L) : tr('share', L)}</button>
         <button className="btn" onClick={() => setHow(true)}>{tr('howScoring', L)}</button>
         <span style={{ color: 'var(--ink-muted)', fontWeight: 600, fontSize: '1rem' }}>{tr('privacyReview', L)}</span>
+        {startErr && <p role="alert" className="muted" style={{ flexBasis: '100%', margin: 0 }}>{tr('startFailed', L)}</p>}
+        {copyUrl && <label className="copy-fallback" style={{ flexBasis: '100%' }}>{tr('copyFallback', L)} <input readOnly dir="ltr" value={copyUrl} onFocus={(e) => e.currentTarget.select()} autoFocus /></label>}
       </section>
 
       {how && (
@@ -376,7 +422,7 @@ export default function Review() {
 const HOW_EN = (s: ClassSetting) => [
   "Each kid holds one misconception known from research. A badge moves up only when the AI judge finds that your words meet that kid's fixed checklist, and it must quote you.",
   `Points are then counted by fixed rules: Reached every learner 40 (5 per step), Checked for understanding 20 (10 per real question), Included ${kidName('lina', 'en', s)} 15, Stretched ${kidName('yazan', 'en', s)} 10, Reasons and examples 15 (AI, fixed anchors 0–5).`,
-  '“فاهمين؟” and other yes/no checks never move a badge and earn no points.',
+  '“Everyone understand?” and other yes/no checks never move a badge and earn no points.',
   'A score for one practice lesson, not a rating of you as a teacher.',
   "Informed by: Rosenshine's Principles of Instruction; Wiliam's formative assessment; TeachingWorks high-leverage practices; Hattie & Timperley's model of feedback.",
 ];
@@ -385,4 +431,5 @@ const HOW_AR = (sir: boolean, s: ClassSetting) => [
   `ثم تُحسب النقاط بقواعد ثابتة: الوصول إلى كل طالب 40 (5 لكل خطوة)، التحقق من الفهم 20 (10 لكل سؤال حقيقي)، إشراك ${kidName('lina', 'ar', s)} 15، تحدّي ${kidName('yazan', 'ar', s)} 10، الشرح بالأسباب والأمثلة 15 (ذكاء اصطناعي بمعايير ثابتة 0-5).`,
   '«فاهمين؟» وأسئلة آه أو لا لا تحرّك أي شارة ولا تعطي نقاطاً.',
   `نتيجة لدرس تدريبي واحد، وليست تقييماً لك ${sir ? 'كمعلّم' : 'كمعلّمة'}.`,
+  'مستند إلى: مبادئ التدريس لروزنشاين؛ التقويم التكويني لويليام؛ الممارسات عالية الأثر من TeachingWorks؛ نموذج التغذية الراجعة لهاتي وتيمبرلي.',
 ];
