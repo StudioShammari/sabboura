@@ -2,3 +2,4 @@
 - [Stand-up mode decisions](standup-mode.md) — body notes, calibration flow, headless fake camera, accepted limits
 - [Tooling quirks](tooling-quirks.md) — drizzle-kit flags, no pnpm root, PORT env, no api artifact type
 - [Kid text gender](kid-text-gender.md) — kid-specific text needs ar_m/ar_f and must render through kidText
+- [Turn playback and lesson end](playback-and-lesson-end.md) — onDone-once/stale/barge invariants; end/score 409 contract; share route must keep HTML redirect
