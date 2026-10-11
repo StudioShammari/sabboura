@@ -5,8 +5,8 @@
     "kind": "jsx",
     "filepath": "src/pages/slides/Title.tsx",
     "title": "Sabboura",
-    "description": "Logo, name and tagline: a flight simulator for teachers",
-    "speakerNotes": "Sabboura means blackboard. Say the tagline out loud: «درّب حالك قبل ما تدخل الصف», practise your lesson before you teach it."
+    "description": "Logo, tagline and team on a full chalkboard",
+    "speakerNotes": "⏱ 5 ثواني\nمرحباً، إحنا فريق سبّورة: مصطفى، يوسف وأحمد من جامعة الأميرة سمية.\nسبّورة هي flight simulator للمعلّمين: «درّب حالك قبل ما تدخل الصف»."
   },
   {
     "id": "problem",
@@ -49,22 +49,13 @@
     "position": 6,
     "kind": "jsx",
     "filepath": "src/pages/slides/Trust.tsx",
-    "title": "Why it isn't just ChatGPT",
-    "description": "Fixed checklists, quoted evidence and code-based scoring",
-    "speakerNotes": "One line: the AI judges against a fixed checklist and must quote you; code counts everything."
-  },
-  {
-    "id": "product",
-    "position": 7,
-    "kind": "jsx",
-    "filepath": "src/pages/slides/Product.tsx",
-    "title": "Built and working today",
-    "description": "Features that already work in the product",
-    "speakerNotes": "Stress that everything on this slide is working today, built on Replit."
+    "title": "Built for training, not surveillance",
+    "description": "No children’s data, voice not stored, video on device, never for appraisal",
+    "speakerNotes": "⏱ 8 ثواني\nوالثقة: ما في بيانات أطفال، الطلاب AI. الصوت بيتحوّل لنص وما بنخزّنه. الفيديو ما بيطلع من الجهاز.\nومش للتقييم أبداً: النتيجة للمعلّم، والمدرسة بتشوف أرقام مجمّعة بس.\nوقبل أول pilot: شاشة موافقة، حذف بكبسة، ومدّة احتفاظ محدّدة، حسب قانون حماية البيانات الشخصية رقم 24 لسنة 2023."
   },
   {
     "id": "business",
-    "position": 8,
+    "position": 7,
     "kind": "jsx",
     "filepath": "src/pages/slides/Business.tsx",
     "title": "Business model",
@@ -72,17 +63,17 @@
     "speakerNotes": "Private school groups sign one contract for hundreds of teachers. Public-school teachers use it free, paid by CSR budgets and foundations. Cost numbers are estimates until the pilots measure them."
   },
   {
-    "id": "market",
-    "position": 9,
+    "id": "competition",
+    "position": 8,
     "kind": "jsx",
-    "filepath": "src/pages/slides/Market.tsx",
-    "title": "Market and why we win",
-    "description": "Comparison with Mursion and the expansion path",
-    "speakerNotes": "Mursion proved the demand with human actors. AI removes the actor: cents per session, in Arabic."
+    "filepath": "src/pages/slides/Competition.tsx",
+    "title": "Why we win",
+    "description": "Comparison with Mursion, ChatGPT, Siraj and lesson-plan tools",
+    "speakerNotes": "⏱ 10 ثواني\nليش إحنا؟ Mursion أثبتت إنه في سوق (أكثر من 70 جامعة) بس بالإنجليزي وبأسعار أمريكية.\nChatGPT بيعمل role-play، بس طلابه بيفهموا فوراً.\nوسراج من الوزارة ممتاز: بيساعد المعلّم يحضّر. سبّورة بتخلّيه يتدرّب. إحنا مكمّلين لسراج، مش منافسين."
   },
   {
     "id": "team",
-    "position": 10,
+    "position": 9,
     "kind": "jsx",
     "filepath": "src/pages/slides/Team.tsx",
     "title": "The team",
@@ -91,11 +82,20 @@
   },
   {
     "id": "ask",
-    "position": 11,
+    "position": 10,
     "kind": "jsx",
     "filepath": "src/pages/slides/Ask.tsx",
     "title": "The ask",
     "description": "Ministry of Education and school partnerships plus 50,000 JOD funding",
     "speakerNotes": "Ask clearly: partnerships with the Ministry of Education and schools, and 50,000 JOD for operating costs, hiring, licenses and pilots. End on the tagline."
+  },
+  {
+    "id": "thank-you",
+    "position": 11,
+    "kind": "jsx",
+    "filepath": "src/pages/slides/ThankYou.tsx",
+    "title": "Thank you",
+    "description": "Logo, tagline and thanks",
+    "speakerNotes": "⏱ 5 ثواني\nسبّورة: «درّب حالك قبل ما تدخل الصف». تدرّب على طلاب AI، عشان طلابنا الحقيقيين ياخدوا أحسن حصة.\nشكراً."
   }
 ]

@@ -19,14 +19,14 @@ const TEAM = [
     initials: 'AS',
     name: 'Ahmad Shadeed',
     major: 'Software Engineering',
-    win: 'Wrote the original Sabboura concept',
-    icon: 'idea',
+    win: 'App Developer',
+    icon: 'code',
   },
 ];
 
 export default function Team() {
   return (
-    <SlideShell n={10}>
+    <SlideShell n={9}>
       <Eyebrow>The team</Eyebrow>
       <h2 className="h-display" style={{ marginTop: '1.2cqw' }}>
         Three builders from PSUT.
@@ -74,10 +74,7 @@ export default function Team() {
                       <path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3" />
                     </>
                   ) : (
-                    <>
-                      <path d="M9 18h6M10 22h4" />
-                      <path d="M12 2a7 7 0 0 0-4 12.7V16h8v-1.3A7 7 0 0 0 12 2z" />
-                    </>
+                    <path d="M9 7l-5 5 5 5M15 7l5 5-5 5" />
                   )}
                 </svg>
                 {m.win}

@@ -24,7 +24,7 @@ const PLANS = [
 
 export default function Business() {
   return (
-    <SlideShell n={8}>
+    <SlideShell n={7}>
       <Eyebrow>Business model</Eyebrow>
       <h2 className="h-display" style={{ marginTop: '1.2cqw', fontSize: '3.6cqw' }}>
         Teachers practise free. Schools and sponsors pay.

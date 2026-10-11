@@ -1,93 +1,117 @@
-import { Badge } from '@/components/Badge';
-import { Eyebrow, SlideShell, asset } from '@/components/SlideShell';
+import type { ReactNode } from 'react';
+import { Eyebrow, SlideShell } from '@/components/SlideShell';
 
-const POINTS = [
+function Icon({ children }: { children: ReactNode }) {
+  return (
+    <span
+      className="flex items-center justify-center"
+      style={{ width: '4.2cqw', height: '4.2cqw', flex: 'none', borderRadius: '0.9cqw', background: '#e3ebf7' }}
+    >
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="var(--action)"
+        strokeWidth="1.9"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        style={{ width: '2.1cqw', height: '2.1cqw' }}
+        aria-hidden
+      >
+        {children}
+      </svg>
+    </span>
+  );
+}
+
+const STRIKE = <path d="M3 3l18 18" stroke="#b3361f" />;
+
+const POINTS: Array<{ title: string; text: string; icon: ReactNode }> = [
   {
-    title: 'Real mistakes, fixed in advance',
-    text: 'Each kid’s misconception comes from a fixed library based on education research, not from the AI’s imagination.',
+    title: 'No children’s data',
+    text: 'The students are AI. No real child is ever recorded.',
+    icon: (
+      <>
+        <circle cx="12" cy="8" r="4" />
+        <path d="M4.5 21a7.5 7.5 0 0 1 15 0" />
+      </>
+    ),
   },
   {
-    title: 'The AI must quote you',
-    text: 'The AI judge checks the teacher’s words against each kid’s fixed checklist and has to quote the exact words that moved a kid.',
+    title: 'Voice never stored',
+    text: 'Speech becomes text; we keep words, not recordings.',
+    icon: (
+      <>
+        <rect x="9" y="2.5" width="6" height="12" rx="3" />
+        <path d="M5 11a7 7 0 0 0 14 0M12 18v3.5" />
+        {STRIKE}
+      </>
+    ),
   },
   {
-    title: 'Code counts everything',
-    text: 'Code, not the AI, moves the badges, adds up the points and picks the best moment. A judge test sheet runs before every demo.',
+    title: 'Video stays on the laptop',
+    text: 'Body-language notes are computed on the device.',
+    icon: (
+      <>
+        <rect x="2.5" y="6.5" width="13" height="11" rx="2" />
+        <path d="M15.5 10.5l6-3.5v10l-6-3.5" />
+        {STRIKE}
+      </>
+    ),
   },
   {
-    title: 'Respectful and private',
-    text: 'A practice score, never an appraisal. We keep the teacher’s words as text, never their voice.',
+    title: 'Never for appraisal',
+    text: 'Scores belong to the teacher. Schools see totals only.',
+    icon: (
+      <>
+        <path d="M12 2.5l8 3v6c0 5-3.4 8.6-8 10-4.6-1.4-8-5-8-10v-6l8-3z" />
+        <path d="M8.5 12l2.5 2.5 4.5-5" />
+      </>
+    ),
   },
 ];
 
 export default function Trust() {
   return (
     <SlideShell n={6}>
-      <div className="grid h-full" style={{ gridTemplateColumns: '1fr 1fr', gap: '4.4cqw' }}>
-        <div className="flex flex-col">
-          <Eyebrow>Why it isn’t “just ChatGPT”</Eyebrow>
-          <h2 className="h-display" style={{ marginTop: '1.2cqw', fontSize: '4cqw' }}>
-            The AI never grades by vibe.
-          </h2>
-          <div className="flex flex-col" style={{ gap: '1.5cqw', marginTop: '2.2cqw' }}>
-            {POINTS.map((p, i) => (
-              <div key={p.title} className="flex" style={{ gap: '1.1cqw' }}>
-                <span className="step-num" style={{ width: '2.1cqw', height: '2.1cqw', fontSize: '1.15cqw', flex: 'none' }}>
-                  {i + 1}
-                </span>
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: '1.45cqw', lineHeight: 1.3 }}>{p.title}</div>
-                  <p className="body" style={{ fontSize: '1.2cqw', marginTop: '0.2cqw' }}>
-                    {p.text}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+      <Eyebrow>Trust</Eyebrow>
+      <h2 className="h-display" style={{ marginTop: '1.2cqw' }}>
+        Built for training, not surveillance.
+      </h2>
 
-        <div className="flex flex-col justify-center">
-          <div className="board" style={{ padding: '2.2cqw 2.4cqw 2.4cqw' }}>
-            <div className="flex items-center justify-between">
-              <span style={{ fontSize: '1cqw', color: 'var(--chalk-dim)', fontWeight: 600 }}>The teacher said</span>
-              <span lang="ar" dir="rtl" className="chalk-font" style={{ fontSize: '1.2cqw', color: 'var(--chalk-yellow)' }}>
-                مقارنة الكسور
-              </span>
-            </div>
-            <p lang="ar" dir="rtl" style={{ fontSize: '2.3cqw', fontWeight: 600, lineHeight: 1.7, margin: '0.8cqw 0 0', textAlign: 'right' }}>
-              لينا،{' '}
-              <span className="mark" style={{ color: 'var(--board)' }}>
-                لو قسمنا الرغيف على ثلاثة بدل اتنين
-              </span>
-              ، القطعة بتكبر ولا بتصغر؟
-            </p>
-            <p style={{ fontSize: '1.1cqw', color: 'var(--chalk-dim)', margin: '0.6cqw 0 0', lineHeight: 1.45 }}>
-              “Lina, if we split the loaf into three instead of two, does each piece get bigger or smaller?”
-            </p>
-          </div>
-          <div className="ledge" />
-
-          <div className="card flex items-center" style={{ marginTop: '1.8cqw', padding: '1.3cqw 1.6cqw', gap: '1.3cqw' }}>
-            <span className="avatar" style={{ width: '5.4cqw', height: '5.4cqw', flex: 'none' }}>
-              <img src={asset('kids/lina-happy.webp')} alt="Lina" />
-            </span>
-            <div className="flex flex-col" style={{ gap: '0.6cqw', flex: 1 }}>
-              <div className="flex items-center" style={{ gap: '0.8cqw' }}>
-                <span style={{ fontFamily: 'var(--font-display-family)', fontWeight: 800, fontSize: '1.7cqw' }}>Lina</span>
-                <Badge kind="lost" />
-                <span style={{ color: 'var(--ink-muted)', fontSize: '1.2cqw' }}>→</span>
-                <Badge kind="gotit" />
-              </div>
-              <span style={{ fontSize: '1.1cqw', color: 'var(--ink-muted)', lineHeight: 1.4 }}>
-                Moved because the quoted words match her checklist: she sees a fraction as two separate numbers.
-              </span>
+      <div
+        className="grid"
+        style={{ gridTemplateColumns: '1fr 1fr', gridAutoRows: '1fr', gap: '2cqw', marginTop: '3cqw', flex: 1 }}
+      >
+        {POINTS.map((p) => (
+          <div key={p.title} className="card flex" style={{ padding: '2.2cqw 2.4cqw', gap: '1.8cqw', alignItems: 'center' }}>
+            <Icon>{p.icon}</Icon>
+            <div>
+              <h3 className="h-section" style={{ fontSize: '2.1cqw' }}>
+                {p.title}
+              </h3>
+              <p className="body" style={{ marginTop: '0.4cqw', fontSize: '1.45cqw' }}>
+                {p.text}
+              </p>
             </div>
           </div>
-          <p style={{ fontSize: '0.95cqw', color: 'var(--ink-muted)', marginTop: '1.4cqw', lineHeight: 1.5 }}>
-            Informed by Rosenshine’s Principles of Instruction, Wiliam’s formative assessment and TeachingWorks’
-            high-leverage practices.
-          </p>
-        </div>
+        ))}
+      </div>
+
+      <div
+        style={{
+          marginTop: '2.4cqw',
+          marginBottom: '0.6cqw',
+          padding: '1.5cqw 2.2cqw',
+          background: '#eaf0f9',
+          border: '0.14cqw dashed #8fa7cf',
+          borderRadius: '1cqw',
+          fontSize: '1.35cqw',
+          lineHeight: 1.5,
+          color: 'var(--ink)',
+        }}
+      >
+        Designed for Jordan’s Personal Data Protection Law (No. 24 of 2023): consent screen, one-click delete and
+        retention limits ship before the first pilot.
       </div>
     </SlideShell>
   );
