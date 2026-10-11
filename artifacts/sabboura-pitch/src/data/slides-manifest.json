@@ -72,8 +72,17 @@
     "speakerNotes": "⏱ 10 ثواني\nليش إحنا؟ Mursion أثبتت إنه في سوق (أكثر من 70 جامعة) بس بالإنجليزي وبأسعار أمريكية.\nChatGPT بيعمل role-play، بس طلابه بيفهموا فوراً.\nوسراج من الوزارة ممتاز: بيساعد المعلّم يحضّر. سبّورة بتخلّيه يتدرّب. إحنا مكمّلين لسراج، مش منافسين."
   },
   {
-    "id": "team",
+    "id": "market",
     "position": 9,
+    "kind": "jsx",
+    "filepath": "src/pages/slides/Market.tsx",
+    "title": "Market",
+    "description": "Jordan first (147K teachers), then Saudi Arabia and the UAE",
+    "speakerNotes": "⏱ 12 ثانية\nبنبدأ بالأردن: 147 ألف معلّم، منهم 43 ألف بالمدارس الخاصة. هون بنثبت المنتج.\nوالتوسّع: السعودية 525 ألف معلّم، وأبوظبي بتطلب 75 ساعة تطوير مهني لكل معلّم بالسنة، وGEMS لحالها فيها أكثر من 10 آلاف معلّم.\nللأسئلة: السوق الخاص بالأردن بسعرنا سقفه حوالي 4.1 مليون دينار بالسنة، ولهيك الخليج هو الـ scale."
+  },
+  {
+    "id": "team",
+    "position": 10,
     "kind": "jsx",
     "filepath": "src/pages/slides/Team.tsx",
     "title": "The team",
@@ -82,7 +91,7 @@
   },
   {
     "id": "ask",
-    "position": 10,
+    "position": 11,
     "kind": "jsx",
     "filepath": "src/pages/slides/Ask.tsx",
     "title": "The ask",
@@ -91,7 +100,7 @@
   },
   {
     "id": "thank-you",
-    "position": 11,
+    "position": 12,
     "kind": "jsx",
     "filepath": "src/pages/slides/ThankYou.tsx",
     "title": "Thank you",

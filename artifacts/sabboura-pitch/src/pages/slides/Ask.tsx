@@ -29,7 +29,7 @@ function Tick() {
 
 export default function Ask() {
   return (
-    <SlideShell n={10}>
+    <SlideShell n={11}>
       <Eyebrow>The ask</Eyebrow>
       <h2 className="h-display" style={{ marginTop: '1.2cqw' }}>
         Our ask: partners and 50,000 JOD.

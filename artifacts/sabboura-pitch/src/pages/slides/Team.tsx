@@ -26,7 +26,7 @@ const TEAM = [
 
 export default function Team() {
   return (
-    <SlideShell n={9}>
+    <SlideShell n={10}>
       <Eyebrow>The team</Eyebrow>
       <h2 className="h-display" style={{ marginTop: '1.2cqw' }}>
         Three builders from PSUT.

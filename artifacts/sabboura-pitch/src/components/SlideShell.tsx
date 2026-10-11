@@ -3,7 +3,7 @@ import { LogoMark } from './Logo';
 
 export { asset } from './asset';
 
-export const TOTAL_SLIDES = 11;
+export const TOTAL_SLIDES = 12;
 
 interface SlideShellProps {
   n: number;
