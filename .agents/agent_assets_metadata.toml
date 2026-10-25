@@ -160,3 +160,9 @@ id = "v-QUo7Y8eqr7rGSkR7db0"
 uri = "file://.local/outputs/Sabboura-Pitch-Deck.pptx"
 type = "slides"
 title = "Sabboura Pitch Deck.pptx"
+
+[[outputs]]
+id = "AhNANbawyyNYgbwm5oQZk"
+uri = "file://.local/outputs/Sabboura-Pitch-Deck.pdf"
+type = "pdf"
+title = "Sabboura Pitch Deck.pdf"
